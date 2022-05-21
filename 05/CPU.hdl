@@ -40,4 +40,39 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+
+	// on if A instruction i.e. msb is zero
+	Not(in=instruction[15], out=ainstr);
+
+	// load Dreg and Areg if C-instruction and dest bit is on
+	And(a=instruction[15], b=instruction[3], out=writeM);
+	And(a=instruction[15], b=instruction[4], out=dload);
+	And(a=instruction[15], b=instruction[5], out=aaload);
+
+	// load a if A-instruction or C-instruction and destination bit is on
+	Or(a=ainstr, b=aaload, out=aload);	
+
+	DRegister(in=aluout, load=dload, out=dregout);
+
+	ARegister(in=mux1out, load=aload, out=aregout, out=aregout2, out[0..14]=addressM);
+
+	Mux16(a=instruction, b=aluout, sel=instruction[15], out=mux1out);
+	Mux16(a=aregout, b=inM, sel=instruction[12], out=mux2out);
+
+	ALU(x=dregout, y=mux2out, zr=zrout, ng=ngout, zx=instruction[11], nx=instruction[10], 
+		zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=aluout, out=outM);
+	
+	// Jump logic
+	And(a=zrout, b=instruction[1], out=iszero);
+	And(a=ngout, b=instruction[2], out=isneg);
+	Not(in=ngout, out=not1);
+	Not(in=zrout, out=not2);
+	And(a=not1, b=not2, out=andout);
+	And(a=andout, b=instruction[0], out=ispos);
+	Or(a=iszero, b=isneg, out=jump1);
+	Or(a=jump1, b=ispos, out=jump2);
+	And(a=jump2, b=instruction[15], out=jump);
+
+	PC(inc=true, load=jump, reset=reset, in=aregout2, out[0..14]=pc);
+	
 }

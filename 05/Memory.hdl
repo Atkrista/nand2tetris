@@ -27,16 +27,17 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
-	Not(in=address[14], out=not1);
-	Not(in=address[13], out=not2);
-	And(a=load, b=not1, out=ramload);
-	And(a=address[14], b=not2, out=screensel);
-	And(a=load, b=screensel, out=screenload);
-	And(a=address[14], b=address[13], out=kbdsel);
-	RAM16K(in=in, address=address[0..13], load=ramload, out=out1);
-	Screen(in=in, address=address[0..12], load=screenload, out=out2);
+    // Put your code here:						
+	// RAM address 0x0 to 0x3fff				00 0 0x000 to 011 0xfff
+    //											01 0
+	// Screen addresses from 0x4000 to 0x5fff	10 0 0x000 to 101 0xfff
+	// Keyboard address 0x6000					11 0 0x000
+
+	// use address bits 13 and 14 to generate chip select signals
+	DMux4Way(in=load, sel=address[13..14], a = selram1, b=selram2, c=selscreen, d=selkbd);
+	Or(a=selram1, b=selram2, out=selram);
+	RAM16K(in=in, address=address[0..13], load=selram, out=out1);
+	Screen(in=in, address=address[0..12], load=selscreen, out=out2);
 	Keyboard(out=out3);
-	Mux16(a=out1, b=out2, sel=screensel, out=out4);
-	Mux16(a=out4, b=out3, sel=kbdsel, out=out);
+	Mux4Way16(a=out1, b=out1, c=out2,d=out3, sel=address[13..14], out=out);
 }
