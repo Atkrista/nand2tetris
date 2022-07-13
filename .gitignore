@@ -1,2 +1,2 @@
 *.out
-*.hack
+*/*.hack
