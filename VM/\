@@ -1,0 +1,61 @@
+class Parser:
+
+    C_ARITHMETIC = "c_arithmetic"
+    C_PUSH = "push"
+    C_POP = "pop"
+    C_GOTO = "goto"
+    C_IF = "if"
+    C_FUNCTION = "func"
+    C_RETURN = "ret"
+    C_CALL = "call"
+
+    COMMAND_MAP = {
+        "pop": C_POP,
+        "push": C_PUSH,
+        "add": C_ARITHMETIC,
+        "sub": C_ARITHMETIC,
+        "neg": C_ARITHMETIC,
+        "eq": C_ARITHMETIC,
+        "gt": C_ARITHMETIC,
+        "lt": C_ARITHMETIC,
+        "and": C_ARITHMETIC,
+        "or": C_ARITHMETIC,
+        "not": C_ARITHMETIC,
+    }
+
+    def __init__(self, file_name: str) -> None:
+        self.file = open(file_name, "r")
+        self.lines = self.file.read().splitlines()
+        self.current_command = []
+
+    def __del__(self) -> None:
+        self.file.close()
+
+    def has_more_lines(self) -> bool:
+        return len(self.lines) != 0
+
+    def advance(self) -> None:
+        self.current_command = self.lines.pop(0).split()
+
+    def command_type(self):
+        return self.COMMAND_MAP[self.current_command[0]]
+
+    def arg1(self):
+        if self.command_type() == self.C_ARITHMETIC:
+            return self.current_command[0]
+        else:
+            self.current_command[1]
+
+    def arg2(self):
+        return self.current_command[2]
+
+
+p = Parser("test.vm")
+while p.has_more_lines():
+    p.advance()
+    if p.command_type() == p.C_ARITHMETIC:
+        print("TYPE:", p.command_type(), "ARG:", p.arg1())
+    else:
+        print("TYPE:", p.command_type(),"ARG1:", p.arg1(),"ARG2:", p.arg2())
+
+del p

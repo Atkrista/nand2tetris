@@ -1,0 +1,4 @@
+push constant 12
+push constant 13
+add
+pop this 2
