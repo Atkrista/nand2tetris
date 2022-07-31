@@ -1,4 +1,10 @@
-push constant 12
-push constant 13
+push constant 42
+push constant 31
+push constant 19
 add
-pop this 2
+push constant 50
+eq
+not
+push constant 42
+add
+eq

@@ -1,0 +1,166 @@
+// push constant 3030
+@3030
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// pop pointer 0
+@R3
+D=A
+@0
+D=A+D
+@R13
+M=D
+@R0
+A=M
+D=M
+@R13
+A=M
+M=D
+@R0
+M=M-1
+// push constant 3040
+@3040
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// pop pointer 1
+@R3
+D=A
+@1
+D=A+D
+@R13
+M=D
+@R0
+A=M
+D=M
+@R13
+A=M
+M=D
+@R0
+M=M-1
+// push constant 32
+@32
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// pop this 2
+@R3
+D=A
+@2
+D=A+D
+@R13
+M=D
+@R0
+A=M
+D=M
+@R13
+A=M
+M=D
+@R0
+M=M-1
+// push constant 46
+@46
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// pop that 6
+@R4
+D=A
+@6
+D=A+D
+@R13
+M=D
+@R0
+A=M
+D=M
+@R13
+A=M
+M=D
+@R0
+M=M-1
+// push pointer 0
+@R3
+D=A
+@0
+A=A+D
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// push pointer 1
+@R3
+D=A
+@1
+A=A+D
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// add 
+@0
+A=M
+A=A-1
+D=M
+A=A-1
+M=M+D
+@0
+M=M-1
+// push this 2
+@R3
+D=A
+@2
+A=A+D
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// sub 
+@0
+A=M
+A=A-1
+D=M
+A=A-1
+M=M-D
+@0
+M=M-1
+// push that 6
+@R4
+D=A
+@6
+A=A+D
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1
+// add 
+@0
+A=M
+A=A-1
+D=M
+A=A-1
+M=M+D
+@0
+M=M-1
+(LOOP)
+@LOOP
+0;JMP

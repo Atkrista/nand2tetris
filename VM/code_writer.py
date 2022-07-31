@@ -2,35 +2,50 @@ import constants
 
 
 class Writer:
+
+    segment_map = {
+        "local": "R1",
+        "argument": "R2",
+        "this": "R3",
+        "that": "R4",
+        "pointer": "R3",
+        "temp": "R5",
+    }
+
     def __init__(self, file_name) -> None:
+        self.file_name = file_name.stem
         self.file = open(file_name, "w")
+        self._count = 0
+
+    @property
+    def count(self):
+        return self._count
+
+    def _inc_count(self):
+        self._count += 1
 
     def close(self):
         self.file.close()
 
-    def _write_add(self):
-        self.file.writelines("@0\nA=M\n")
-
     def _fetch_two_and_operate(self, operation):
-        # Fetch SP
-        self.file.write("@0\nA=M\n")
-        # fetch first operand to D
-        self.file.write("A=A-1\nD=M\n")
-        # point M to second operand
-        self.file.write("A=A-1\n")
-        # Write correct operation
-        self.file.write(f"M=M{operation}D\n")
-        # Set SP properly
-        self.file.write("@0\nM=M-1\n")
+        self.file.write(
+            f"""@R0
+AM=M-1
+D=M
+@R0
+A=M-1
+M=M{operation}D\n"""
+        )
 
     def _fetch_one_and_operate(self, operation):
-        # Fetch SP
-        self.file.write("@0\nA=M\n")
-        # fetch first operand to D
-        self.file.write("A=A-1\nD=M\n")
-        # Write correct operation
-        self.file.write(f"M={operation}M\n")
-        # SP doesn't change here
+        self.file.write(
+            f"""@R0
+A=M-1
+M={operation}M\n"""
+        )
+
+    def _write_add(self):
+        self._fetch_two_and_operate("+")
 
     def _write_sub(self):
         self._fetch_two_and_operate("-")
@@ -39,7 +54,7 @@ class Writer:
         self._fetch_one_and_operate("-")
 
     def _write_eq(self):
-        self._fetch_two_and_operate("=")
+        self._write_conditional("JEQ")
 
     def _write_not(self):
         self._fetch_one_and_operate("!")
@@ -52,32 +67,25 @@ class Writer:
 
     def _write_conditional(self, condition):
         self.file.write(
-            f"""@0
+            f"""@R0
+AM=M-1
 D=M
-// Compute final value of SP right now
-@R13
-M=D
-M=M-1
-@0
-A=M
-A=A-1
-D=M
-A=A-1
+@R0
+A=M-1
 D=M-D
+@TRUE{self.count}
 D;{condition}
-(TRUE)
-@R13
-M=-1
-@END
+D=0
+@SET{self.count}
 0;JMP
-(FALSE)
-@R13
-M=0
-(END)
-D=A
-@0
+(TRUE{self.count})
+D=-1
+(SET{self.count})
+@R0
+A=M-1
 M=D\n"""
         )
+        self._inc_count()
 
     def _write_lt(self):
         self._write_conditional("JLT")
@@ -108,9 +116,93 @@ M=D\n"""
         else:
             pass
 
+    def _get_base_address(self, segment):
+        return self.segment_map[segment]
+
     def write_push_pop(self, command, segment, index):
-        self.file.write(f"// {command} {segment} {index}\n")
-        pass
+        self.file.write(f"//{command} {segment} {index}\n")
+        if command == constants.C_PUSH:
+            self._write_push(segment, index)
+        else:
+            self._write_pop(segment, index)
+
+    def _write_push_static(self, index):
+        self.file.write(
+            f"""@{self.file_name}.{index}
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1\n"""
+        )
+
+    def _write_push_constant(self, index):
+        self.file.write(
+            f"""@{index}
+D=A
+@R0
+A=M
+M=D
+@R0
+M=M+1\n"""
+        )
+
+    def _write_push_segment(self, segment, index):
+        self.file.write(
+            f"""@{index}
+D=A
+@{self._get_base_address(segment)}
+A=A+D
+D=M
+@R0
+A=M
+M=D
+M=M+1\n"""
+        )
+
+    def _write_push(self, segment, index):
+        if segment == "static":
+            self._write_push_static(index)
+        elif segment == "constant":
+            self._write_push_constant(index)
+        else:
+            self._write_push_segment(segment, index)
+
+    def _write_pop_static(self, index):
+        self.file.write(
+            f"""@R0
+AM=M-1
+D=M
+@{self.file_name}.{index}
+M=D\n"""
+        )
+
+    def _write_pop_segment(self, segment, index):
+        self.file.write(
+            f"""@{self._get_base_address(segment)}
+D=A
+@{index}
+D=A+D
+@R13
+M=D
+@R0
+AM=M-1
+D=M
+@R13
+A=M
+M=D\n"""
+        )
+
+    def _write_pop(self, segment, index):
+        if segment == "static":
+            self._write_pop_static(index)
+        else:
+            self._write_pop_segment(segment, index)
 
     def _write_loop(self):
-        pass
+        self.file.write(
+            """(LOOP)
+@LOOP
+0;JMP"""
+        )

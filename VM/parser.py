@@ -5,10 +5,15 @@ class Parser:
     def __init__(self, file_name: str) -> None:
         self.file = open(file_name, "r")
         self.lines = self.file.read().splitlines()
+        self.lines = self._clean(self.lines)
         self.current_command = []
 
     def __del__(self) -> None:
         self.file.close()
+
+    def _clean(self, lines):
+        # Remove comments and newlines
+        return [line for line in lines if not line.startswith("//") and line]
 
     def has_more_lines(self) -> bool:
         return len(self.lines) != 0
