@@ -8,14 +8,17 @@ class Writer:
         "argument": "R2",
         "this": "R3",
         "that": "R4",
-        "pointer": "R3",
-        "temp": "R5",
+        "pointer": ("R3", "R4"),
+        "temp": ("R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12"),
     }
 
     def __init__(self, file_name) -> None:
         self.file_name = file_name.stem
         self.file = open(file_name, "w")
         self._count = 0
+
+    def _get_base_address(self, segment):
+        return self.segment_map[segment]
 
     @property
     def count(self):
@@ -116,15 +119,12 @@ M=D\n"""
         else:
             pass
 
-    def _get_base_address(self, segment):
-        return self.segment_map[segment]
-
     def write_push_pop(self, command, segment, index):
         self.file.write(f"//{command} {segment} {index}\n")
         if command == constants.C_PUSH:
-            self._write_push(segment, index)
+            self._write_push(segment, int(index))
         else:
-            self._write_pop(segment, index)
+            self._write_pop(segment, int(index))
 
     def _write_push_static(self, index):
         self.file.write(
@@ -148,16 +148,39 @@ M=D
 M=M+1\n"""
         )
 
+    def _write_push_temp(self, index):
+        self.file.write(
+            f"""@{self._get_base_address('temp')[index]}
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1\n"""
+        )
+
+    def _write_push_pointer(self, index):
+        self.file.write(
+            f"""@{self._get_base_address('pointer')[index]}
+D=M
+@R0
+A=M
+M=D
+@R0
+M=M+1\n"""
+        )
+
     def _write_push_segment(self, segment, index):
         self.file.write(
             f"""@{index}
 D=A
 @{self._get_base_address(segment)}
-A=A+D
+A=M+D
 D=M
 @R0
 A=M
 M=D
+@R0
 M=M+1\n"""
         )
 
@@ -166,6 +189,10 @@ M=M+1\n"""
             self._write_push_static(index)
         elif segment == "constant":
             self._write_push_constant(index)
+        elif segment == "temp":
+            self._write_push_temp(index)
+        elif segment == "pointer":
+            self._write_push_pointer(index)
         else:
             self._write_push_segment(segment, index)
 
@@ -178,10 +205,28 @@ D=M
 M=D\n"""
         )
 
+    def _write_pop_temp(self, index):
+        self.file.write(
+            f"""@R0
+AM=M-1
+D=M
+@{self._get_base_address('temp')[index]}
+M=D\n"""
+        )
+
+    def _write_pop_pointer(self, index):
+        self.file.write(
+            f"""@R0
+AM=M-1
+D=M
+@{self._get_base_address('pointer')[index]}
+M=D\n"""
+        )
+
     def _write_pop_segment(self, segment, index):
         self.file.write(
             f"""@{self._get_base_address(segment)}
-D=A
+D=M
 @{index}
 D=A+D
 @R13
@@ -197,6 +242,10 @@ M=D\n"""
     def _write_pop(self, segment, index):
         if segment == "static":
             self._write_pop_static(index)
+        elif segment == "temp":
+            self._write_pop_temp(index)
+        elif segment == "pointer":
+            self._write_pop_pointer(index)
         else:
             self._write_pop_segment(segment, index)
 
