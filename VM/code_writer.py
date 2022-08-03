@@ -32,17 +32,17 @@ class Writer:
 
     def _fetch_two_and_operate(self, operation):
         self.file.write(
-            f"""@R0
+            f"""@SP
 AM=M-1
 D=M
-@R0
+@SP
 A=M-1
 M=M{operation}D\n"""
         )
 
     def _fetch_one_and_operate(self, operation):
         self.file.write(
-            f"""@R0
+            f"""@SP
 A=M-1
 M={operation}M\n"""
         )
@@ -70,10 +70,10 @@ M={operation}M\n"""
 
     def _write_conditional(self, condition):
         self.file.write(
-            f"""@R0
+            f"""@SP
 AM=M-1
 D=M
-@R0
+@SP
 A=M-1
 D=M-D
 @TRUE{self.count}
@@ -84,7 +84,7 @@ D=0
 (TRUE{self.count})
 D=-1
 (SET{self.count})
-@R0
+@SP
 A=M-1
 M=D\n"""
         )
@@ -130,10 +130,10 @@ M=D\n"""
         self.file.write(
             f"""@{self.file_name}.{index}
 D=M
-@R0
+@SP
 A=M
 M=D
-@R0
+@SP
 M=M+1\n"""
         )
 
@@ -141,10 +141,10 @@ M=M+1\n"""
         self.file.write(
             f"""@{index}
 D=A
-@R0
+@SP
 A=M
 M=D
-@R0
+@SP
 M=M+1\n"""
         )
 
@@ -152,10 +152,10 @@ M=M+1\n"""
         self.file.write(
             f"""@{self._get_base_address('temp')[index]}
 D=M
-@R0
+@SP
 A=M
 M=D
-@R0
+@SP
 M=M+1\n"""
         )
 
@@ -163,10 +163,10 @@ M=M+1\n"""
         self.file.write(
             f"""@{self._get_base_address('pointer')[index]}
 D=M
-@R0
+@SP
 A=M
 M=D
-@R0
+@SP
 M=M+1\n"""
         )
 
@@ -177,10 +177,10 @@ D=A
 @{self._get_base_address(segment)}
 A=M+D
 D=M
-@R0
+@SP
 A=M
 M=D
-@R0
+@SP
 M=M+1\n"""
         )
 
@@ -198,7 +198,7 @@ M=M+1\n"""
 
     def _write_pop_static(self, index):
         self.file.write(
-            f"""@R0
+            f"""@SP
 AM=M-1
 D=M
 @{self.file_name}.{index}
@@ -207,7 +207,7 @@ M=D\n"""
 
     def _write_pop_temp(self, index):
         self.file.write(
-            f"""@R0
+            f"""@SP
 AM=M-1
 D=M
 @{self._get_base_address('temp')[index]}
@@ -216,7 +216,7 @@ M=D\n"""
 
     def _write_pop_pointer(self, index):
         self.file.write(
-            f"""@R0
+            f"""@SP
 AM=M-1
 D=M
 @{self._get_base_address('pointer')[index]}
@@ -231,7 +231,7 @@ D=M
 D=A+D
 @R13
 M=D
-@R0
+@SP
 AM=M-1
 D=M
 @R13

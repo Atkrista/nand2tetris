@@ -1,8 +1,0 @@
-push constant 25
-push constant 50
-pop local 0
-pop local 1
-push constant 50
-push constant 25
-pop static 0
-pop static 1
