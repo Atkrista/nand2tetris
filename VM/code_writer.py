@@ -12,8 +12,11 @@ class Writer:
         "temp": ("R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12"),
     }
 
-    def __init__(self, file_name) -> None:
-        self.file_name = file_name.stem
+    def __init__(self, file_name, is_dir=False) -> None:
+        if is_dir:
+            self.file_name = file_name.split("/")[-1]
+        else:
+            self.file_name = file_name.split("/")[-1][:-3]
         self.file = open(file_name, "w")
         self._count = 0
 

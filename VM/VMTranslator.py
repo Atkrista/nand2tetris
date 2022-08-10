@@ -2,33 +2,43 @@ import sys
 import constants
 from code_writer import Writer
 from parser import Parser
-from pathlib import Path
+from os import listdir
+from os.path import isfile
 
 
 class VmTranslator:
-    def __init__(self, parser, writer) -> None:
-        self.parser = parser
+    def __init__(self, parsers, writer) -> None:
+        self.parsers = parsers
         self.writer = writer
 
-    def translate_file(self):
-        while self.parser.has_more_lines():
-            self.parser.advance()
-            if self.parser.command_type() == constants.C_ARITHMETIC:
-                self.writer.write_arithmetic(self.parser.arg1())
-            elif (
-                self.parser.command_type() == constants.C_PUSH
-                or self.parser.command_type() == constants.C_POP
-            ):
-                self.writer.write_push_pop(
-                    self.parser.command_type(), self.parser.arg1(), self.parser.arg2()
-                )
+    def translate(self):
+        for parser in self.parsers:
+            while parser.has_more_lines():
+                parser.advance()
+                if parser.command_type() == constants.C_ARITHMETIC:
+                    self.writer.write_arithmetic(parser.arg1())
+                elif (
+                    parser.command_type() == constants.C_PUSH
+                    or parser.command_type() == constants.C_POP
+                ):
+                    self.writer.write_push_pop(
+                        parser.command_type(), parser.arg1(), parser.arg2()
+                    )
         self.writer._write_loop()
         self.writer.close()
 
 
 if __name__ == "__main__":
-    file_path = Path(sys.argv[1])
-    output_file_path_parts = list(file_path.parts)[:-1]
-    output_filepath = Path(*output_file_path_parts, f"{file_path.stem}.asm")
-    translator = VmTranslator(Parser(file_path), Writer(output_filepath))
-    translator.translate_file()
+    input_path = sys.argv[1]
+    is_dir = not isfile(input_path)
+    parsers = []
+    output = None
+    # input_path = Path(sys.argv[1])
+    if is_dir:
+        parsers.extend([Parser(f) for f in listdir(input_path) if f.endswith(".vm")])
+        output = input_path + ".asm"
+    else:
+        parsers.append(Parser(input_path))
+        output = input_path[:-3] + ".asm"
+    translator = VmTranslator(parsers, Writer(output, is_dir))
+    translator.translate()
