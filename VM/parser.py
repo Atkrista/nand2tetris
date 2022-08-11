@@ -3,7 +3,8 @@ import constants
 
 class Parser:
     def __init__(self, file_name: str) -> None:
-        self.file = open(file_name, "r")
+        self.file_name = file_name
+        self.file = open(self.file_name, "r")
         self.lines = self.file.read().splitlines()
         self.lines = self._clean(self.lines)
         self.current_command = []
@@ -25,7 +26,7 @@ class Parser:
         return constants.COMMAND_TYPE_MAP[self.current_command[0]]
 
     def arg1(self):
-        if self.command_type() == constants.C_ARITHMETIC:
+        if self.command_type() == constants.TYPE_ARITHMETIC:
             return self.current_command[0]
         else:
             return self.current_command[1]

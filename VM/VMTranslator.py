@@ -13,17 +13,18 @@ class VmTranslator:
 
     def translate(self):
         for parser in self.parsers:
+            self.writer.set_file_name(parser.file_name.split("/")[-1][:-3])
             while parser.has_more_lines():
                 parser.advance()
-                if parser.command_type() == constants.C_ARITHMETIC:
+                command_type = parser.command_type()
+                if command_type == constants.TYPE_ARITHMETIC:
                     self.writer.write_arithmetic(parser.arg1())
-                elif (
-                    parser.command_type() == constants.C_PUSH
-                    or parser.command_type() == constants.C_POP
-                ):
+                elif command_type in constants.get_push_pop_types():
                     self.writer.write_push_pop(
-                        parser.command_type(), parser.arg1(), parser.arg2()
+                        command_type, parser.arg1(), parser.arg2()
                     )
+                elif command_type in constants.get_branching_types():
+                    self.writer.write_branching(command_type, parser.arg1())
         self.writer._write_loop()
         self.writer.close()
 
@@ -33,7 +34,6 @@ if __name__ == "__main__":
     is_dir = not isfile(input_path)
     parsers = []
     output = None
-    # input_path = Path(sys.argv[1])
     if is_dir:
         parsers.extend([Parser(f) for f in listdir(input_path) if f.endswith(".vm")])
         output = input_path + ".asm"
