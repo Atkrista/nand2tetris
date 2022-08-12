@@ -4,6 +4,9 @@ TYPE_POP = "POP"
 TYPE_LABEL = "LABEL"
 TYPE_GOTO = "GOTO"
 TYPE_IF_GOTO = "IF_GOTO"
+TYPE_FUNCTION = "FUNCTION"
+TYPE_CALL = "CALL"
+TYPE_RETURN = "RETURN"
 
 C_POP = "pop"
 C_PUSH = "push"
@@ -29,6 +32,9 @@ COMMAND_TYPE_MAP = {
     C_LABEL: TYPE_LABEL,
     C_GOTO: TYPE_GOTO,
     C_IF_GOTO: TYPE_IF_GOTO,
+    C_FUNC: TYPE_FUNCTION,
+    C_CALL: TYPE_CALL,
+    C_RET: TYPE_RETURN,
     C_ADD: TYPE_ARITHMETIC,
     C_SUB: TYPE_ARITHMETIC,
     C_NEG: TYPE_ARITHMETIC,
@@ -46,6 +52,9 @@ TYPE_COMMAND_MAP = {
     TYPE_LABEL: C_LABEL,
     TYPE_IF_GOTO: C_IF_GOTO,
     TYPE_GOTO: C_GOTO,
+    TYPE_FUNCTION: C_FUNC,
+    TYPE_CALL: C_CALL,
+    TYPE_RETURN: C_RET,
 }
 
 
@@ -55,3 +64,7 @@ def get_branching_types():
 
 def get_push_pop_types():
     return (TYPE_PUSH, TYPE_POP)
+
+
+def get_function_types():
+    return (TYPE_FUNCTION, TYPE_CALL)

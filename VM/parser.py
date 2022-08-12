@@ -12,6 +12,9 @@ class Parser:
     def __del__(self) -> None:
         self.file.close()
 
+    def __repr__(self):
+        return f"<Parser {self.file_name}>"
+
     def _clean(self, lines):
         # Remove comments and newlines
         return [line for line in lines if not line.startswith("//") and line]
