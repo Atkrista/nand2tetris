@@ -18,114 +18,20 @@ class Writer:
         else:
             self.file_name = file_name.split("/")[-1][:-3]
         self.file = open(file_name, "w")
+        # _count is used to generate unique labels for conditionals
         self._count = 0
-        self._ret_count = {}
-        self._call_stack = [""]
-
-    @property
-    def current_function(self):
-        return self._call_stack[-1]
-
-    def _generate_label(self, label):
-        return f"{self._current_file_name}.{self.current_function}${label}"
-
-    def _generate_return_address(self):
-        self._ret_count[self._call_stack[-1]] += 1
-        return f"{self._current_file_name}.{self.current_function}$ret.{self._ret_count[self.current_function]}"
-
-    def _write_prelude(self):
-        self.file.write(
-            """@256
-D=A
-@SP
-M=D
-"""
-        )
-
-    def set_file_name(self, name):
-        self._current_file_name = name
-
-    def _get_base_address(self, segment):
-        return self.segment_map[segment]
-
-    def _get_current_label(self, label):
-        return f"{self._current_file_name + '.' + self.current_function + '$' + label}"
-
-    @property
-    def count(self):
-        return self._count
-
-    def _inc_count(self):
-        self._count += 1
+        self._ret_count = 0
+        # The function translator is currently translating
+        self._current_function = ""
+        self._current_file_name = "GLOBAL"
+        if is_dir:
+            self._bootstrap_program()
 
     def close(self):
         self.file.close()
 
-    def _fetch_two_and_operate(self, operation):
-        self.file.write(
-            f"""@SP
-AM=M-1
-D=M
-@SP
-A=M-1
-M=M{operation}D\n"""
-        )
-
-    def _fetch_one_and_operate(self, operation):
-        self.file.write(
-            f"""@SP
-A=M-1
-M={operation}M\n"""
-        )
-
-    def _write_add(self):
-        self._fetch_two_and_operate("+")
-
-    def _write_sub(self):
-        self._fetch_two_and_operate("-")
-
-    def _write_neg(self):
-        self._fetch_one_and_operate("-")
-
-    def _write_eq(self):
-        self._write_conditional("JEQ")
-
-    def _write_not(self):
-        self._fetch_one_and_operate("!")
-
-    def _write_or(self):
-        self._fetch_two_and_operate("|")
-
-    def _write_and(self):
-        self._fetch_two_and_operate("&")
-
-    def _write_conditional(self, condition):
-        self.file.write(
-            f"""@SP
-AM=M-1
-D=M
-@SP
-A=M-1
-D=M-D
-@TRUE{self.count}
-D;{condition}
-D=0
-@SET{self.count}
-0;JMP
-(TRUE{self.count})
-D=-1
-(SET{self.count})
-@SP
-A=M-1
-M=D\n"""
-        )
-        self._inc_count()
-
-    def _write_lt(self):
-        self._write_conditional("JLT")
-
-    def _write_gt(self):
-        self._write_conditional("JGT")
+    def set_file_name(self, name):
+        self._current_file_name = name
 
     def write_arithmetic(self, command):
         self.file.write(f"// {command} \n")
@@ -178,8 +84,116 @@ M=D\n"""
             self._write_function(func_name, n)
         elif command_type == constants.TYPE_CALL:
             self._write_call(func_name, n)
-        else:
+        elif command_type == constants.TYPE_RETURN:
             self._write_return()
+        else:
+            pass
+
+    @property
+    def ret_count(self):
+        self._ret_count += 1
+        return self._ret_count
+
+    @property
+    def current_function(self):
+        # Currently processing function
+        return self._current_function
+
+    @property
+    def count(self):
+        self._count += 1
+        return self._count
+
+    def _set_current_function(self, function):
+        self._current_function = function
+
+    def _bootstrap_program(self):
+        self.file.write(
+            f"""// Bootstrap Code
+@256
+D=A
+@SP
+M=D
+"""
+        )
+
+        self.file.write(f"// Call Sys.init 0\n")
+        self._write_call("Sys.init", 0)
+
+    def _generate_label(self, label):
+        return f"{self._current_file_name}.{self.current_function}${label}"
+
+    def _generate_return_address(self):
+        return f"{self._current_file_name}.{self.current_function}$ret.{self.ret_count}"
+
+    def _get_base_address(self, segment):
+        return self.segment_map[segment]
+
+    def _fetch_two_and_operate(self, operation):
+        self.file.write(
+            f"""@SP
+AM=M-1
+D=M
+@SP
+A=M-1
+M=M{operation}D\n"""
+        )
+
+    def _fetch_one_and_operate(self, operation):
+        self.file.write(
+            f"""@SP
+A=M-1
+M={operation}M\n"""
+        )
+
+    def _write_add(self):
+        self._fetch_two_and_operate("+")
+
+    def _write_sub(self):
+        self._fetch_two_and_operate("-")
+
+    def _write_neg(self):
+        self._fetch_one_and_operate("-")
+
+    def _write_eq(self):
+        self._write_conditional("JEQ")
+
+    def _write_not(self):
+        self._fetch_one_and_operate("!")
+
+    def _write_or(self):
+        self._fetch_two_and_operate("|")
+
+    def _write_and(self):
+        self._fetch_two_and_operate("&")
+
+    def _write_conditional(self, condition):
+        count = self.count
+        self.file.write(
+            f"""@SP
+AM=M-1
+D=M
+@SP
+A=M-1
+D=M-D
+@TRUE{count}
+D;{condition}
+D=0
+@SET{count}
+0;JMP
+(TRUE{count})
+D=-1
+(SET{count})
+@SP
+A=M-1
+M=D\n"""
+        )
+
+    def _write_lt(self):
+        self._write_conditional("JLT")
+
+    def _write_gt(self):
+        self._write_conditional("JGT")
 
     def _write_push_static(self, index):
         self.file.write(
@@ -312,7 +326,7 @@ M=D\n"""
         )
 
     def _write_label(self, label):
-        self.file.write(f"({self._generate_label(label)})")
+        self.file.write(f"({self._generate_label(label)})\n")
 
     def _write_goto(self, label):
         self.file.write(
@@ -324,32 +338,29 @@ M=D\n"""
         self.file.write(
             f"""@SP
 AM=M-1
-D-M
+D=!M
 @{self._generate_label(label)}
-D;JNE
+D;JEQ
 """
         )
 
     def _write_function(self, func_name, n_vars):
-        self._call_stack.append(func_name)
-        self._ret_count[func_name] = 0
-        if n_vars:
+        self._set_current_function(func_name)
+        self.file.write(f"({func_name})\n")
+        # Need to init the local variables to zero
+        for _ in range(n_vars):
             self.file.write(
-                f"""({self._current_file_name + '.' + func_name})
-@{self._get_base_address('local')}
-AD=M
+                f"""@SP
+A=M
 M=0
-"""
-            )
-        for _ in range(n_vars - 1):
-            self.file.write(
-                f"""AD=D+1
-M=0
+@SP
+M=M+1
 """
             )
 
     def _write_call(self, function_name, n_args):
         ret_addr = self._generate_return_address()
+        # Generate and push the return address on the stack
         self.file.write(
             f"""@{ret_addr}
 D=A
@@ -360,6 +371,8 @@ M=D
 M=M+1
 """
         )
+
+        # Save memory segments of caller
         for val in ("local", "argument", "this", "that"):
             self.file.write(
                 f"""@{self._get_base_address(val)}
@@ -371,84 +384,95 @@ M=D
 M=M+1
 """
             )
+
+        # Reposition the ARG segment for the callee
         self.file.write(
             f"""@SP
 D=M
 """
         )
+
         for _ in range(5 + n_args):
             self.file.write(f"D=D-1\n")
 
         self.file.write(
-            f"""
-@{self._get_base_address('argument')}
+            f"""@{self._get_base_address('argument')}
 M=D
 """
         )
 
+        # Reposition the Local segment
         self.file.write(
             f"""@SP
 D=M
 @{self._get_base_address('local')}
 M=D
-@{self._current_file_name + '.' + function_name}
+"""
+        )
+
+        # Only using function_name since (?) that fn names
+        # are unique across diff. *.vm files
+        self.file.write(
+            f"""@{function_name}
 0;JMP
 """
         )
+        # Inject the return address directly into the code
         self.file.write(f"({ret_addr})\n")
 
     def _write_return(self):
-        self._call_stack.pop()
+        # Saves the pointer to local segment in R13
         self.file.write(
             f"""@{self._get_base_address('local')}
 D=M
 @R13
 M=D
-D=D-1
-D=D-1
-D=D-1
-D=D-1
-A=D-1
-D=M
-@R14
+"""
+        )
+        # Saves the return address to R14
+        for _ in range(5):
+            self.file.write(f"D=D-1\n")
+
+        self.file.write(
+            f"""@R14
 M=D
-@SP
-AM=M-1
+"""
+        )
+
+        # Repositions the return value for caller
+        self.file.write(
+            f"""@SP
+A=M-1
 D=M
 @{self._get_base_address('argument')}
 A=M
 M=D
-@{self._get_base_address('argument')}
-D=M+1
+"""
+        )
+
+        # Repositions SP for caller
+        self.file.write(
+            f"""@{self._get_base_address('argument')}
+D=M
 @SP
-M=D
-@R13
-A=M-1
-D=M
-@{self._get_base_address('that')}
-M=D
-@R13
-A=M-1
-A=A-1
-D=M
-@{self._get_base_address('this')}
-M=D
-@R13
-A=M-1
-A=A-1
-A=A-1
-D=M
-@{self._get_base_address('argument')}
-M=D
-@R13
-A=M-1
-A=A-1
-A=A-1
-A=A-1
-D=M
-@{self._get_base_address('local')}
-M=D
-@R14
+M=D+1
+"""
+        )
+
+        # Restores THAT, THIS, ARG, LCL for caller
+        for val in ("that", "this", "argument", "local"):
+            self.file.write(
+                f"""@R13
+    AM=M-1
+    D=M
+    @{self._get_base_address(val)}
+    M=D
+    """
+            )
+
+        # GOTO return address
+        self.file.write(
+            f"""@R14
 A=M
 0;JMP
 """

@@ -12,7 +12,6 @@ class VmTranslator:
         self.writer = writer
 
     def translate(self):
-        self.writer._write_prelude()
         for parser in self.parsers:
             self.writer.set_file_name(parser.file_name.split("/")[-1][:-3])
             while parser.has_more_lines():
