@@ -54,7 +54,7 @@ class Writer:
         elif command == constants.C_GT:
             self._write_gt()
         else:
-            pass
+            raise ValueError("Invalid Command")
 
     def write_push_pop(self, command_type, segment, index):
         self.file.write(
@@ -197,7 +197,7 @@ M=D\n"""
 
     def _write_push_static(self, index):
         self.file.write(
-            f"""@{self.file_name}.{index}
+            f"""@{self._current_file_name}.{index}
 D=M
 @SP
 A=M
@@ -241,10 +241,10 @@ M=M+1\n"""
 
     def _write_push_segment(self, segment, index):
         self.file.write(
-            f"""@{index}
-D=A
-@{self._get_base_address(segment)}
-A=M+D
+            f"""@{self._get_base_address(segment)}
+D=M
+@{index}
+A=A+D
 D=M
 @SP
 A=M
@@ -270,7 +270,7 @@ M=M+1\n"""
             f"""@SP
 AM=M-1
 D=M
-@{self.file_name}.{index}
+@{self._current_file_name}.{index}
 M=D\n"""
         )
 
@@ -305,7 +305,8 @@ AM=M-1
 D=M
 @R13
 A=M
-M=D\n"""
+M=D
+"""
         )
 
     def _write_pop(self, segment, index):
@@ -338,9 +339,9 @@ M=D\n"""
         self.file.write(
             f"""@SP
 AM=M-1
-D=!M
+D=M
 @{self._generate_label(label)}
-D;JEQ
+D;JNE
 """
         )
 
@@ -417,6 +418,7 @@ M=D
 0;JMP
 """
         )
+
         # Inject the return address directly into the code
         self.file.write(f"({ret_addr})\n")
 
@@ -432,6 +434,12 @@ M=D
         # Saves the return address to R14
         for _ in range(5):
             self.file.write(f"D=D-1\n")
+
+        self.file.write(
+            f"""A=D
+D=M
+"""
+        )
 
         self.file.write(
             f"""@R14
@@ -463,11 +471,11 @@ M=D+1
         for val in ("that", "this", "argument", "local"):
             self.file.write(
                 f"""@R13
-    AM=M-1
-    D=M
-    @{self._get_base_address(val)}
-    M=D
-    """
+AM=M-1
+D=M
+@{self._get_base_address(val)}
+M=D
+"""
             )
 
         # GOTO return address
