@@ -1,0 +1,83 @@
+/** Class that encapsulates functionality to draw/re-draw the screen */
+
+class Painter {
+    field int val; 
+
+    /* Class constructor */
+    constructor Painter new(){
+        // calls to drawPixel will fill that pixel
+        do Screen.setColor(true);
+        return this;
+    }
+
+    /* Class destructor */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void init(int left, int right, int top, int bottom) {
+        do Screen.clearScreen();
+        // Draw boundaries of the game canvas
+        do Screen.drawLine(left, top, right, top);
+        do Screen.drawLine(left, top, left, bottom);
+        do Screen.drawLine(right, top, right, bottom);
+        do Screen.drawLine(left, bottom, right, bottom);
+        return;
+    }
+
+    /* Maps the 25 * 25 state 2D array to a 100 * 100 screen area  
+    method void repaintCanvas(TwoDArray state, int sizeX, int sizeY) {
+        var int i, j, startX, startY;
+        let i = 0;
+        let j = 0;
+        while(i < sizeX) {
+            while (j < sizeY) {
+                if(state.get(i, j) = 1) {
+                    Screen.setColor(true)
+                }else {
+                    Screen.setColor(false);
+                }
+                let startX = 4 * i;
+                let startY = 4 * j;
+                do drawSixteenPixels(startX, startY);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        return;
+    }
+
+    /* Give a starting addr x, y draws the 4 pixels (x,y), (x+1,y), (x, y+1), (x+1,y+1)
+    function void drawSixteenPixels(int x, int y) {
+        var int i, j;
+        let i = 0;
+        let j = 0;
+        while(i < 4) {
+            while(j < 4){
+                do Screen.drawPixel(x+i, y+j);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        //do Screen.drawPixel(x, y);
+        //do Screen.drawPixel(x, y + 1);
+        //do Screen.drawPixel(x, y + 2);
+        //do Screen.drawPixel(x, y + 3);
+        //do Screen.drawPixel(x + 1, y);
+        //do Screen.drawPixel(x + 1, y + 1);
+        //do Screen.drawPixel(x + 1, y + 2);
+        //do Screen.drawPixel(x + 1, y + 3);
+        //do Screen.drawPixel(x + 2, y);
+        //do Screen.drawPixel(x + 2, y + 1);
+        //do Screen.drawPixel(x + 2, y + 2);
+        //do Screen.drawPixel(x + 2, y + 3);
+        //do Screen.drawPixel(x + 3, y);
+        //do Screen.drawPixel(x + 3, y + 1);
+        //do Screen.drawPixel(x + 3, y + 2);
+        //do Screen.drawPixel(x + 3, y + 3);
+        return;
+    }
+}

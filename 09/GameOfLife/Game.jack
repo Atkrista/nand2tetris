@@ -1,0 +1,190 @@
+/** Class that drives the game */
+
+class Game {
+    field Painter painter;
+    // State is a 2D array that holds the current state of the game
+    field TwoDArray state, nextState;
+    field int currentX, currentY, sizeX, sizeY; 
+    static int leftBoundary, rightBoundary, topBoundary, bottomBoundary;
+
+    constructor Game new() {
+        let sizeX = 25;
+        let sizeY = 25;
+        let state = TwoDArray.new(sizeX, sizeY);
+        let nextState = TwoDArray.new(sizeX, sizeY);
+        let painter = Painter.new();
+
+        // Set the boundary of our game `canvas`
+        let leftBoundary = 206;
+        let rightBoundary = 306;
+        let topBoundary = 78;
+        let bottomBoundary = 178;
+
+        // Start the selection at somewhere around the middle 
+        let currentX = leftBoundary + 50;
+        let currentY = topBoundary + 50;
+        
+        return this;
+    }
+
+    method void dispose() {
+        do state.dispose();
+        do nextState.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method void init() {
+        var char key;
+        var boolean exit;
+        do painter.init(leftBoundary, rightBoundary, topBoundary, bottomBoundary);
+        let exit = false;
+        while(~exit){
+            let key = Keyboard.keyPressed();
+            // Waits for key to be pressed
+            while (key = 0){
+                let key = Keyboard.keyPressed();
+            }
+            // Exit from init stage and start the game
+            if(key = 90) {
+                let exit = true;
+            }
+            // Sets the state[x/4][y/4] and sets the 4 corresponding pixels
+            if(key = 84) {
+                do state.set(currentX/4, currentY/4, 1);
+                do Painter.drawSixteenPixels(currentX, currentY);
+            }
+            // Move left
+            if(key = 65){
+                if((currentX - leftBoundary) > 4 ){
+                    let currentX = currentX - 4;
+                }
+            }
+            // Move right
+            if(key = 68) {
+                if((rightBoundary - currentX) > 4){
+                    let currentX = currentX + 4;
+                }
+            }
+            // Move up
+            if(key = 87){
+                if((currentY - topBoundary) > 4){
+                    let currentY = currentY - 4;
+                }
+            }
+            // Move down
+            if(key = 83){
+                if((bottomBoundary - currentY) > 4){
+                    let currentY = currentY + 4;
+                }
+            }
+            while (~(key = 0)) {
+                let key = Keyboard.keyPressed();
+            }
+        }
+        return;
+    }
+
+    /* Compute and assign the next state of a cell */
+    method int computeCellNextState(int x, int y) {
+        var int temp, liveCount;
+        let temp = state.get(x, y); 
+        // Top left corner cell
+        if((x = 0) & (y = 0)) {
+            let liveCount = state.get(0, 1) +  state.get(1, 0) + state.get(1, 1) ;
+        }
+        // Bottom right cell 
+        if((x = (sizeX - 1)) & (y = (sizeY - 1))) {
+            let liveCount = state.get(x-1 , y-1) +  state.get(x, y-1) + state.get(x-1, y) ;
+        }  
+        // Top right cell
+        if((x = 0) & (y = (sizeY - 1))) {
+            let liveCount = state.get(x+1,y) +  state.get(x, y-1) + state.get(x+1,y-1) ;
+        }  
+        // Bottom left cell
+        if((x = (sizeX - 1)) & (y = (sizeY - 1))) {
+            let liveCount = state.get(x-1, y) +  state.get(x-1 , y+1) + state.get(x, y+1) ;
+        }
+        // Left Edge cells
+        if(y = 0) {
+            let liveCount = state.get(x-1, y) + state.get(x-1, y+1) + state.get(x, y+1) + state.get(x+1, y+1) + state.get(x+1, y);
+        }
+        // Right Edge cells
+        if(y = sizeY-1) {
+            let liveCount = state.get(x-1, y-1) + state.get(x-1, y) + state.get(x, y-1) + state.get(x+1, y-1) + state.get(x+1, y);
+        }
+        // Top Edge cells
+        if(x = 0) {
+            let liveCount = state.get(x, y-1) + state.get(x+1, y-1) + state.get(x+1, y) + state.get(x+1, y+1) + state.get(x, y+1);
+        }
+        // Bottom Edge cells
+        if(x = sizeX-1) {
+            let liveCount = state.get(x, y-1) + state.get(x, y+1) + state.get(x-1, y+1) + state.get(x-1, y) + state.get(x-1, y-1);
+        }
+        // Central cells
+        else {
+            let liveCount = state.get(x, y-1) + state.get(x, y+1) + state.get(x-1, y-1) + state.get(x-1, y) + state.get(x-1, y+1) + state.get(x+1, y-1) + state.get(x+1, y) + state.get(x+1, y+1);
+        }
+        // A live cell  < 2 or > 3 live neighbors dies 
+        if (temp = 1) {
+            if((liveCount < 2) | (liveCount > 3)) { 
+                return 0;
+            }else {
+                return 1;
+            }
+        }
+        // A dead cell with exactly 3 live neighbors turns alive
+        else { 
+            if(liveCount = 3){ 
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+    
+    /* Given a current state compute the next state and store it */
+    method void computeNextState() {
+        var int i, j, temp;
+        let i = 0;
+        let j = 0;
+        while(i < sizeX) {
+            while (j < sizeY) {
+                let temp = do computeCellNextState(i, j);
+                do nextState.set(i, j, temp);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        return;
+    }
+
+    method void replaceCurrentState() {
+        var int i, j, temp;
+        let i = 0;
+        let j = 0;
+        while(i < sizeX) {
+            while (j < sizeY) {
+                let temp = do nextState.get(i, j);
+                do state.set(i, j, temp);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        return;
+    }
+
+    /* Main Game loop */
+    method void runForever() {
+        while(true){
+            do computeNextState();
+            do replaceCurrentState();
+            do painter.repaintCanvas(state, sizeX, sizeY);
+        }
+        return;
+    }
+    
+}
