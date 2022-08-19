@@ -1,0 +1,209 @@
+/** Class that drives the game */
+
+class Game {
+    field Painter painter;
+    // State is a 2D array that holds the current state of the game
+    field TwoDArray state, nextState;
+    field int currentX, currentY, sizeX, sizeY; 
+    static int leftBoundary, rightBoundary, topBoundary, bottomBoundary;
+
+    /* Class constructor */
+    constructor Game new() {
+        let sizeX = 25;
+        let sizeY = 25;
+        let state = TwoDArray.new(sizeX, sizeY);
+        let nextState = TwoDArray.new(sizeX, sizeY);
+        let painter = Painter.new();
+
+        // Set the boundary of our game `canvas`
+        let leftBoundary = 206;
+        let rightBoundary = 306;
+        let topBoundary = 78;
+        let bottomBoundary = 178;
+
+        // Start at the top left corner
+        let currentX = leftBoundary;
+        let currentY = topBoundary;
+        
+        return this;
+    }
+
+    /* Destructor method */
+    method void dispose() {
+        do state.dispose();
+        do nextState.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /* Asks the user to set the initial state of the board */ 
+    method void init() {
+        var char key;
+        var boolean exit;
+        var int x, y;
+        do painter.init(leftBoundary, rightBoundary, topBoundary, bottomBoundary);
+        let exit = false;
+        while(~exit){
+            let key = Keyboard.keyPressed();
+            // Waits for key to be pressed
+            while (key = 0){
+                let key = Keyboard.keyPressed();
+            }
+            // Exit from init stage and start the game
+            if(key = 90) {
+                let exit = true;
+            }
+            // Sets the state[x][y] and sets the 4 corresponding pixels
+            if(key = 84) {
+                let x = (currentX - leftBoundary) / 4;
+                let y = (currentY - topBoundary) / 4;
+                do state.set(x, y, 1);
+                do Painter.drawSixteenPixels(currentX, currentY);
+            }
+            // Move left
+            if(key = 65){
+                if((currentX - leftBoundary) > 4 ){
+                    let currentX = currentX - 4;
+                }
+            }
+            // Move right
+            if(key = 68) {
+                if((rightBoundary - currentX) > 4){
+                    let currentX = currentX + 4;
+                }
+            }
+            // Move up
+            if(key = 87){
+                if((currentY - topBoundary) > 4){
+                    let currentY = currentY - 4;
+                }
+            }
+            // Move down
+            if(key = 83){
+                if((bottomBoundary - currentY) > 4){
+                    let currentY = currentY + 4;
+                }
+            }
+            while (~(key = 0)) {
+                let key = Keyboard.keyPressed();
+            }
+        }
+        return;
+    }
+
+    /* Compute and assign the next state of a cell */
+    method int computeCellNextState(int x, int y) {
+        var int temp, liveCount;
+        let liveCount = getLiveCount(x, y);
+        let temp = state.get(x, y); 
+        // A live cell  < 2 or > 3 live neighbors dies 
+        if (temp = 1) {
+            if((liveCount = 2) | (liveCount = 3)) { 
+                return 1;
+            }else {
+                return 0;
+            }
+        }
+        // A dead cell with exactly 3 live neighbors turns alive
+        else { 
+            if(liveCount = 3){ 
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+    
+    /* Given a current state compute the next state and store it */
+    method void computeNextState() {
+        var int i, j, temp;
+        let i = 0;
+        let j = 0;
+        while(i < sizeX) {
+            while (j < sizeY) {
+                let temp = computeCellNextState(i, j);
+                do nextState.set(i, j, temp);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        return;
+    }
+
+    /* Replace state with nextState */
+    method void replaceCurrentState() {
+        var int i, j, temp;
+        let i = 0;
+        let j = 0;
+        while(i < sizeX) {
+            while (j < sizeY) {
+                let temp = nextState.get(i, j);
+                do state.set(i, j, temp);
+                let j = j + 1;
+            }
+            let i = i + 1;
+            let j = 0;
+        }
+        return;
+    }
+
+    /* Main Game loop */
+    method void runForever() {
+        while(true){
+            do computeNextState();
+            do replaceCurrentState();
+            do painter.repaintCanvas(state, sizeX, sizeY, leftBoundary, topBoundary);
+        }
+        return;
+    }
+
+    /** Given a cell state[x][y] get the live count of its valid neighbors */ 
+    method int getLiveCount(int x, int y) {
+        var int liveCount;
+        // Top left corner cell
+        if((x = 0) & (y = 0)) {
+            let liveCount = state.get(0, 1) +  state.get(1, 0) + state.get(1, 1) ;
+            return liveCount;
+        }
+        // Top right cell
+        if((x = 0) & (y = (sizeY - 1))) {
+            let liveCount = state.get(x+1,y) +  state.get(x, y-1) + state.get(x+1,y-1);
+            return liveCount;
+        }  
+        // Left Edge cells
+        if(y = (sizeY - 1)) {
+            let liveCount = state.get(x-1, y) + state.get(x-1, y+1) + state.get(x, y+1) + state.get(x+1, y+1) + state.get(x+1, y);
+            return liveCount;
+        }
+        // Bottom right cell 
+        if((x = (sizeX - 1)) & (y = (sizeY - 1))) {
+            let liveCount = state.get(x-1 , y-1) +  state.get(x, y-1) + state.get(x-1, y);
+            return liveCount;
+        }  
+        // Bottom left cell
+        if((x = (sizeX - 1)) & (y = 0)) {
+            let liveCount = state.get(x-1, y) +  state.get(x-1 , y+1) + state.get(x, y+1);
+            return liveCount;
+        }
+        // Right Edge cells
+        if(y = (sizeY-1)) {
+            let liveCount = state.get(x-1, y-1) + state.get(x-1, y) + state.get(x, y-1) + state.get(x+1, y-1) + state.get(x+1, y);
+            return liveCount;
+        }
+        // Top Edge cells
+        if(x = 0) {
+            let liveCount = state.get(x, y-1) + state.get(x+1, y-1) + state.get(x+1, y) + state.get(x+1, y+1) + state.get(x, y+1);
+            return liveCount;
+        }
+        // Bottom Edge cells
+        if(x = (sizeX-1)) {
+            let liveCount = state.get(x, y-1) + state.get(x, y+1) + state.get(x-1, y+1) + state.get(x-1, y) + state.get(x-1, y-1);
+            return liveCount;
+        }
+        // Central cells
+        let liveCount = state.get(x, y-1) + state.get(x, y+1) + state.get(x-1, y-1) + state.get(x-1, y) + state.get(x-1, y+1) + state.get(x+1, y-1) + state.get(x+1, y) + state.get(x+1, y+1);
+        return liveCount;
+    }
+}

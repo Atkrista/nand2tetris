@@ -1,0 +1,44 @@
+/** Implementation of a two dimensional Array */
+
+class TwoDArray {
+    field int size, rows, cols;
+    field Array array;
+
+    /* Class constructor */
+    constructor TwoDArray new(int x, int y) {
+        var int i;
+        let rows = x;
+        let cols = y;
+        let size = rows * cols; 
+        let array = Array.new(size); 
+        // // Initialize all bits to zero
+        // // Unnecessary??
+        // while(i < size) {
+        //     let array[i] = 0;
+        //     let i = i + 1;
+        // }
+        return this;
+    }
+
+    /* Class Destructor */
+    method void dispose() {
+        do array.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+    // Get value of array[x][y]
+    method int get(int x, int y) {
+        var int addr, temp;
+        let addr = x * cols + y;
+        return array[addr];
+    }
+
+    // Set array[x][y] = val  
+    method void set(int x, int y, int val) {
+        var int addr;
+        let addr = x * cols + y;
+        let array[addr] = val;
+        return;
+    }
+
+}
