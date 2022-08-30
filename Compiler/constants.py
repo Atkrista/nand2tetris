@@ -5,8 +5,8 @@ class TokenType(Enum):
     KEYWORD = "keyword"
     SYMBOL = "symbol"
     IDENTIFIER = "identifier"
-    INT_CONST = "int_const"
-    STRING_CONST = "string_const"
+    INT_CONST = "integerConstant"
+    STRING_CONST = "stringConstant"
 
 
 class KeyWord(Enum):

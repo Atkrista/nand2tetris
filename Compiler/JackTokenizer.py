@@ -13,7 +13,9 @@ class JackTokenizer:
         """Opens the input .jack file/stream and gets ready to tokeninze it."""
         self._tokens = []
         self._tokenize(input)
-        self.current_token = self._tokens.pop(0)
+
+    def _get_next_token(self):
+        return self._tokens[1]
 
     def has_more_tokens(self) -> bool:
         """Are there any more tokens in the input?"""
@@ -32,43 +34,72 @@ class JackTokenizer:
     def key_word(self) -> KeyWord:
         """Returns the keyword which is the current token as a constant."""
         # return self.current_token.value
+        if not self.token_type() == TokenType.KEYWORD:
+            raise RuntimeError(
+                f"Cannot return {self.token_type().value} for this token."
+            )
         return token_keyword_map[self.current_token.value].value
 
     def symbol(self) -> str:
         """Returns the character which is the current token. Should only be
         called if token_type is SYMBOL."""
+        print(self.current_token)
+        if not self.token_type() == TokenType.SYMBOL:
+            raise RuntimeError(
+                f"Cannot return {self.token_type().value} for this token."
+            )
+        if self.current_token.value == "<":
+            return "&lt;"
+        elif self.current_token.value == ">":
+            return "&gt;"
+        elif self.current_token.value == "&":
+            return "&amp;"
         return self.current_token.value
 
     def identifier(self) -> str:
         """Returns the string which is the current token. Should only be
         called if token_type is IDENTIFIER."""
+        if not self.token_type() == TokenType.IDENTIFIER:
+            raise RuntimeError(
+                f"Cannot return {self.token_type().value} for this token."
+            )
         return self.current_token.value
 
     def int_val(self) -> int:
         """Returns the integer value of the current token. Should only be
         called if token_type is INT_CONST."""
+        if not self.token_type() == TokenType.INT_CONST:
+            raise RuntimeError(
+                f"Cannot return {self.token_type().value} for this token."
+            )
         return int(self.current_token.value)
 
     def string_val(self) -> str:
         """Returns the string value of the current token without the opening and
         closing double quotes. Should only be called if token_type is STRING_CONST."""
+        if not self.token_type() == TokenType.STRING_CONST:
+            raise RuntimeError(
+                f"Cannot return {self.token_type().value} for this token."
+            )
         return self.current_token.value[1:-1]
 
     def _tokenize(self, input):
         token_specification = [
-            ("SKIP", r"\s+"),
+            # Skip whitespace and comments
+            ("SKIP", r"(?:\s+)"),
             ("KEYWORD", rf"{'|'.join((e.value for e in KeyWord))}"),
-            ("SYMBOLS", r"{|}|\(|\)|[|]|\.|,|;|\-|\+|\*|/|&|\||<|>|=|~"),
+            ("SYMBOLS", r"\{|\}|\(|\)|\[|\]|\.|,|;|\-|\+|\*|/|&|\||<|>|=|~"),
             ("INT_CONST", r"\d+"),
             ("STRING_CONST", r'".*"'),
             ("IDENTIFIER", r"\w+"),
         ]
         tok_regex = "|".join("(?P<%s>%s)" % pair for pair in token_specification)
-        # print(tok_regex)
+        block_comment_regex = r"/\*\*.*?\*/"
+        inline_comment_regex = r"//.*?\n"
         temp = input.read()
-        # Remove comments
-        temp = re.sub(r"//.*\n", "", temp)
-        temp = re.sub(r"/\*.*\*/", "", temp)
+        # Remove inline and block comments
+        temp = re.sub(inline_comment_regex, "\n", temp)
+        temp = re.sub(block_comment_regex, "", temp, flags=re.DOTALL)
         for mo in re.finditer(tok_regex, temp):
             kind = mo.lastgroup
             value = mo.group()

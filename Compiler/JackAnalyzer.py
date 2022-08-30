@@ -11,11 +11,11 @@ class JackAnalyzer:
 
     def out_file(self, infile):
         """Name of the xml file to write into."""
-        print(infile[:-5] + "T.xml")
-        return infile[:-5] + "T.xml"
+        return infile[:-5] + ".xml"
 
     def is_jack_file(self, input):
         """Checks if `name` is a jack file i.e `file_name.jack` ."""
+        # return input.endswith(".jack")
         return os.path.splitext(input)[1] == ".jack"
 
     def compile_file(self, file_name) -> None:
@@ -23,30 +23,35 @@ class JackAnalyzer:
             self.out_file(file_name), "w"
         ) as outfile:
             tokenizer = JackTokenizer(infile)
-            token = ""
-            tag = ""
-            while tokenizer.has_more_tokens():
-                if tokenizer.token_type() == TokenType.KEYWORD:
-                    token = tokenizer.key_word()
-                    tag = TokenType.KEYWORD.value
-                elif tokenizer.token_type() == TokenType.SYMBOL:
-                    token = tokenizer.symbol()
-                    tag = TokenType.SYMBOL.value
-                elif tokenizer.token_type() == TokenType.IDENTIFIER:
-                    token = tokenizer.identifier()
-                    tag = TokenType.IDENTIFIER.value
-                elif tokenizer.token_type() == TokenType.INT_CONST:
-                    token = tokenizer.int_val()
-                    tag = TokenType.INT_CONST.value
-                elif tokenizer.token_type() == TokenType.STRING_CONST:
-                    token = tokenizer.string_val()
-                    tag = TokenType.STRING_CONST.value
-                outfile.write(f"<{tag}>{token}</{tag}>\n")
-                tokenizer.advance()
+            engine = CompilationEngine(tokenizer, outfile)
+            engine.compile_class()
+            # token = ""
+            # tag = ""
+            # outfile.write(f"<tokens>\n")
+            # while tokenizer.has_more_tokens():
+            #     tokenizer.advance()
+            #     if tokenizer.token_type() == TokenType.KEYWORD:
+            #         token = tokenizer.key_word()
+            #         tag = TokenType.KEYWORD.value
+            #     elif tokenizer.token_type() == TokenType.SYMBOL:
+            #         token = tokenizer.symbol()
+            #         tag = TokenType.SYMBOL.value
+            #     elif tokenizer.token_type() == TokenType.IDENTIFIER:
+            #         token = tokenizer.identifier()
+            #         tag = TokenType.IDENTIFIER.value
+            #     elif tokenizer.token_type() == TokenType.INT_CONST:
+            #         token = tokenizer.int_val()
+            #         tag = TokenType.INT_CONST.value
+            #     elif tokenizer.token_type() == TokenType.STRING_CONST:
+            #         token = tokenizer.string_val()
+            #         tag = TokenType.STRING_CONST.value
+            #     outfile.write(f"<{tag}>{token}</{tag}>\n")
+            # outfile.write(f"</tokens>\n")
 
     def compile_dir(self, dir_name) -> None:
-        for file_name in os.listdir(dir_name):
-            self.compile_file(file_name)
+        jack_files = list(filter(lambda f: f.endswith(".jack"), os.listdir(dir_name)))
+        for f in jack_files:
+            self.compile_file(dir_name + "/" + f)
 
     def compile(self, input) -> None:
         if self.is_jack_file(input):
