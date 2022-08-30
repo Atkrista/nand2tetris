@@ -1,5 +1,5 @@
 from typing import NamedTuple
-from constants import TokenType, KeyWord, Symbols, token_keyword_map
+from constants import TokenType, KeyWord, token_keyword_map
 import re
 
 
@@ -35,19 +35,14 @@ class JackTokenizer:
         """Returns the keyword which is the current token as a constant."""
         # return self.current_token.value
         if not self.token_type() == TokenType.KEYWORD:
-            raise RuntimeError(
-                f"Cannot return {self.token_type().value} for this token."
-            )
+            raise RuntimeError(f"Expected: keyword, Got: {self.current_token.value}.")
         return token_keyword_map[self.current_token.value].value
 
     def symbol(self) -> str:
         """Returns the character which is the current token. Should only be
         called if token_type is SYMBOL."""
-        print(self.current_token)
         if not self.token_type() == TokenType.SYMBOL:
-            raise RuntimeError(
-                f"Cannot return {self.token_type().value} for this token."
-            )
+            raise RuntimeError(f"Expected: symbol, Got: {self.current_token.value}.")
         if self.current_token.value == "<":
             return "&lt;"
         elif self.current_token.value == ">":
@@ -61,7 +56,7 @@ class JackTokenizer:
         called if token_type is IDENTIFIER."""
         if not self.token_type() == TokenType.IDENTIFIER:
             raise RuntimeError(
-                f"Cannot return {self.token_type().value} for this token."
+                f"Expected: identifier, Got: {self.current_token.value}."
             )
         return self.current_token.value
 
@@ -69,18 +64,14 @@ class JackTokenizer:
         """Returns the integer value of the current token. Should only be
         called if token_type is INT_CONST."""
         if not self.token_type() == TokenType.INT_CONST:
-            raise RuntimeError(
-                f"Cannot return {self.token_type().value} for this token."
-            )
+            raise RuntimeError(f"Expected: int_const, Got: {self.current_token.value}.")
         return int(self.current_token.value)
 
     def string_val(self) -> str:
         """Returns the string value of the current token without the opening and
         closing double quotes. Should only be called if token_type is STRING_CONST."""
         if not self.token_type() == TokenType.STRING_CONST:
-            raise RuntimeError(
-                f"Cannot return {self.token_type().value} for this token."
-            )
+            raise RuntimeError(f"Expected: str_const, Got: {self.current_token.value}.")
         return self.current_token.value[1:-1]
 
     def _tokenize(self, input):

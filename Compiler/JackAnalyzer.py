@@ -1,6 +1,5 @@
 import sys
 import os
-from constants import TokenType
 from JackTokenizer import JackTokenizer
 from CompilationEngine import CompilationEngine
 
@@ -24,29 +23,9 @@ class JackAnalyzer:
         ) as outfile:
             tokenizer = JackTokenizer(infile)
             engine = CompilationEngine(tokenizer, outfile)
+            outfile.write(f"<tokens>\n")
             engine.compile_class()
-            # token = ""
-            # tag = ""
-            # outfile.write(f"<tokens>\n")
-            # while tokenizer.has_more_tokens():
-            #     tokenizer.advance()
-            #     if tokenizer.token_type() == TokenType.KEYWORD:
-            #         token = tokenizer.key_word()
-            #         tag = TokenType.KEYWORD.value
-            #     elif tokenizer.token_type() == TokenType.SYMBOL:
-            #         token = tokenizer.symbol()
-            #         tag = TokenType.SYMBOL.value
-            #     elif tokenizer.token_type() == TokenType.IDENTIFIER:
-            #         token = tokenizer.identifier()
-            #         tag = TokenType.IDENTIFIER.value
-            #     elif tokenizer.token_type() == TokenType.INT_CONST:
-            #         token = tokenizer.int_val()
-            #         tag = TokenType.INT_CONST.value
-            #     elif tokenizer.token_type() == TokenType.STRING_CONST:
-            #         token = tokenizer.string_val()
-            #         tag = TokenType.STRING_CONST.value
-            #     outfile.write(f"<{tag}>{token}</{tag}>\n")
-            # outfile.write(f"</tokens>\n")
+            outfile.write(f"</tokens>\n")
 
     def compile_dir(self, dir_name) -> None:
         jack_files = list(filter(lambda f: f.endswith(".jack"), os.listdir(dir_name)))

@@ -35,7 +35,7 @@ class KeyWord(Enum):
 
 token_keyword_map = {e.value: e for e in KeyWord}
 
-Symbols = (
+SYMBOLS = (
     "{",
     "}",
     "(",
@@ -56,3 +56,8 @@ Symbols = (
     "=",
     "~",
 )
+
+OPERATORS = ("+", "-", "*", "&", "|", "<", ">", "=")
+UNARY_OPERATORS = ("-", "~")
+
+KEYWORD_CONSTANTS = ("true", "false", "null", "this")
