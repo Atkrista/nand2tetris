@@ -23,9 +23,9 @@ class JackAnalyzer:
         ) as outfile:
             tokenizer = JackTokenizer(infile)
             engine = CompilationEngine(tokenizer, outfile)
-            outfile.write(f"<tokens>\n")
+            # outfile.write(f"<tokens>\n")
             engine.compile_class()
-            outfile.write(f"</tokens>\n")
+            # outfile.write(f"</tokens>\n")
 
     def compile_dir(self, dir_name) -> None:
         jack_files = list(filter(lambda f: f.endswith(".jack"), os.listdir(dir_name)))

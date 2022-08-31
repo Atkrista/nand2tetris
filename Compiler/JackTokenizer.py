@@ -15,7 +15,7 @@ class JackTokenizer:
         self._tokenize(input)
 
     def _get_next_token(self):
-        return self._tokens[1]
+        return self._tokens[0]
 
     def has_more_tokens(self) -> bool:
         """Are there any more tokens in the input?"""

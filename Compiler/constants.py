@@ -57,7 +57,7 @@ SYMBOLS = (
     "~",
 )
 
-OPERATORS = ("+", "-", "*", "&", "|", "<", ">", "=")
+OPERATORS = ("+", "-", "*", "&", "|", "<", ">", "=", "/")
 UNARY_OPERATORS = ("-", "~")
 
 KEYWORD_CONSTANTS = ("true", "false", "null", "this")

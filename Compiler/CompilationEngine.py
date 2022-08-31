@@ -38,9 +38,9 @@ class CompilationEngine:
 
     def _compile_type(self) -> None:
         tk = self.tokenizer
-        if tk.token_type == TokenType.KEYWORD:
+        if tk.token_type() == TokenType.KEYWORD:
             self._write_tags("keyword", tk.key_word())
-        elif tk.token_type == TokenType.IDENTIFIER:
+        elif tk.token_type() == TokenType.IDENTIFIER:
             self._write_tags("identifier", tk.identifier())
         tk.advance()
 
@@ -53,6 +53,10 @@ class CompilationEngine:
         self._compile_symbol()
         self.compile_expression_list()
         self._compile_symbol()
+
+    @property
+    def token(self):
+        return self.tokenizer.current_token.value
 
     def compile_class(self) -> None:
         """Compiles a complete class."""
@@ -85,7 +89,7 @@ class CompilationEngine:
     def compile_subroutine(self) -> None:
         """Compiles a complete method, function, or constructor."""
         tk = self.tokenizer
-        self._open_tag("subRoutineDec")
+        self._open_tag("subroutineDec")
         self._compile_keyword()
         if tk.current_token.value == "void":
             self._compile_keyword()
@@ -96,7 +100,7 @@ class CompilationEngine:
         self.compile_parameter_list()
         self._compile_symbol()
         self.compile_subroutine_body()
-        self._close_tag("subRoutineDec")
+        self._close_tag("subroutineDec")
 
     def compile_parameter_list(self) -> None:
         """Compiles a (possibly empty) parameter list. Does not handle the closing
@@ -120,13 +124,13 @@ class CompilationEngine:
     def compile_subroutine_body(self) -> None:
         """Compiles a subroutine's body."""
         tk = self.tokenizer
-        self._open_tag("subroutineDec")
+        self._open_tag("subroutineBody")
         self._compile_symbol()
         while tk.current_token.value == "var":
             self.compile_var_dec()
         self.compile_statements()
         self._compile_symbol()
-        self._close_tag("subroutineDec")
+        self._close_tag("subroutineBody")
 
     def compile_var_dec(self) -> None:
         """Compiles a `var` declaration."""
@@ -145,7 +149,9 @@ class CompilationEngine:
         """Compiles a sequence of statements. Does not handle the enclosing curly
         braces, `{` and `}` ."""
         tk = self.tokenizer
+        self._open_tag("statements")
         while tk.current_token.value != "}":
+            # print(self.token)
             if tk.current_token.value == "let":
                 self.compile_let()
             elif tk.current_token.value == "if":
@@ -156,6 +162,7 @@ class CompilationEngine:
                 self.compile_do()
             elif tk.current_token.value == "return":
                 self.compile_return()
+        self._close_tag("statements")
 
     def compile_let(self) -> None:
         """Compiles  a let statement."""
@@ -186,9 +193,9 @@ class CompilationEngine:
         if tk.current_token.value == "else":
             self._compile_keyword()
             self._compile_symbol()
-            self.compile_statements
+            self.compile_statements()
             self._compile_symbol()
-        self._open_tag("ifStatement")
+        self._close_tag("ifStatement")
 
     def compile_while(self) -> None:
         """Compiles a while statement."""
@@ -218,9 +225,10 @@ class CompilationEngine:
         self._open_tag("returnStatement")
         self._compile_keyword()
         if tk.current_token.value == ";":
-            self._compile_symbol
+            self._compile_symbol()
+            self._close_tag("returnStatement")
             return
-        self.compile_expression
+        self.compile_expression()
         self._compile_symbol()
         self._close_tag("returnStatement")
 
@@ -229,7 +237,7 @@ class CompilationEngine:
         tk = self.tokenizer
         self._open_tag("expression")
         self.compile_term()
-        while tk._get_next_token().value in OPERATORS:
+        while tk.current_token.value in OPERATORS:
             self._compile_symbol()
             self.compile_term()
         self._close_tag("expression")
@@ -242,7 +250,6 @@ class CompilationEngine:
         advanced over."""
         tk = self.tokenizer
         self._open_tag("term")
-        next = tk._get_next_token()
         if tk.token_type() == TokenType.STRING_CONST:
             self._write_tags("stringConstant", tk.string_val())
             tk.advance()
@@ -250,23 +257,31 @@ class CompilationEngine:
             self._write_tags("integerConstant", tk.int_val())
             tk.advance()
         elif tk.current_token.value in KEYWORD_CONSTANTS:
-            self._write_tags("keywordConstant", tk.current_token.value)
+            self._write_tags("keyword", tk.current_token.value)
             tk.advance()
         elif tk.token_type() == TokenType.IDENTIFIER:
-            self._compile_identifier()
-            if tk.current_token.value == "[":
+            next = tk._get_next_token().value
+            # Array access
+            if next == "[":
+                self._compile_identifier()
                 self._compile_symbol()
                 self.compile_expression()
                 self._compile_symbol()
+            # Subroutine call
+            elif next in (".", "("):
+                self._compile_subroutine_call()
+            # Variable
+            else:
+                self._compile_identifier()
         elif tk.current_token.value == "(":
             self._compile_symbol()
             self.compile_expression()
             self._compile_symbol()
-        elif tk.current_value in UNARY_OPERATORS:
+        elif tk.current_token.value in UNARY_OPERATORS:
             self._compile_symbol()
             self.compile_term()
         else:
-            self._compile_subroutine_call()
+            raise RuntimeError(f"Invalid term. Got {tk.current_token.value}")
 
         self._close_tag("term")
 
