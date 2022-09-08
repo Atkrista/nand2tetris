@@ -29,7 +29,7 @@ class SymbolTable:
             self._table.append(Symbol(name, symbol_type, "static", self._static_count))
             self._static_count += 1
         elif kind == "field":
-            self._table.append(Symbol(name, symbol_type, "field", self._field_count))
+            self._table.append(Symbol(name, symbol_type, "this", self._field_count))
             self._field_count += 1
         elif kind == "argument":
             self._table.append(Symbol(name, symbol_type, "argument", self._arg_count))

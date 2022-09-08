@@ -70,6 +70,9 @@ OPERATOR_COMMAND_MAP = {
     "=": "eq",
     "/": "call Math.divide 2",
     "*": "call Math.multiply 2",
+}
+
+UNARY_OPERATOR_COMMAND_MAP = {
     "-": "neg",
     "~": "not",
 }

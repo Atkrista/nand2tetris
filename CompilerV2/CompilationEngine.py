@@ -3,9 +3,9 @@ from constants import (
     OPERATORS,
     KEYWORD_CONSTANTS,
     UNARY_OPERATORS,
-    OPERATOR_COMMAND_MAP,
 )
 from SymbolTable import SymbolTable
+from VMWriter import VMWriter
 
 
 class CompilationEngine:
@@ -13,7 +13,7 @@ class CompilationEngine:
         """Creates a new compilation engine with the given input and output.
         The next routine called by the JackAnalyzer module must be compile_class."""
         self.tokenizer = input
-        self.outfile = output
+        self.writer = VMWriter(output)
         self._count = -1
 
     @property
@@ -22,8 +22,9 @@ class CompilationEngine:
         self._count += 1
         return self._count
 
-    def _write_line(self, val):
-        self.outfile.write(val + "\n")
+    @property
+    def token(self):
+        return self.tokenizer.current_token.value
 
     def _compile_symbol(self, done=False):
         tk = self.tokenizer
@@ -59,34 +60,36 @@ class CompilationEngine:
             subroutine_name = ".".join((subroutine_name, self._compile_identifier()))
         self._compile_symbol()
         arg_count = self.compile_expression_list()
-        self._write_line(f"call {subroutine_name} {arg_count}")
+        self.writer.write_call(subroutine_name, arg_count)
         self._compile_symbol()
 
     def _compile_string_const(self, string):
         length = len(string)
         # Save `this` somewhere
-        self._write_line("push pointer 0")
-        self._write_line("pop temp 0")
+        self.writer.write_push("pointer", 0)
+        self.writer.write_pop("temp", 0)
         # Call to create new string object
-        self._write_line(f"push constant {length}")
-        self._write_line("call String.new 1")
+        self.writer.write_push("constant", length)
+        self.writer.write_call("String.new", 1)
         # Update `this` to address of new string obj
-        self._write_line("pop pointer 0")
+        self.writer.write_pop("pointer", 0)
         for ch in string[::-1]:
-            self._write_line(f"push constant {ord(ch)}")
-            self._write_line("call String.appendChar 1")
+            self.writer.write_push("constant", ord(ch))
+            self.writer.write_call("String.appendChar", 1)
             # Rather than dumping the return value, I chose to update `this` which is fine
-            self._write_line("pop pointer 0")
+            self.writer.write_pop("pointer", 0)
 
     def _compile_int_const(self, int_val):
-        self._write_line(f"push constant {int_val}")
+        self.writer.write_push("constant", int_val)
 
     def _compile_keyword_const(self, keyword):
         if keyword == "true":
-            self._write_line("push constant 1")
-            self._write_line("neg")
+            self.writer.write_push("constant", 1)
+            self.writer.write_arithmetic("-", True)
         elif keyword in ("false", "null"):
-            self._write_line("push constant 0")
+            self.writer.write_push("constant", 0)
+        elif keyword == "this":
+            self.writer.write_push("argument", 0)
         else:
             raise RuntimeError(
                 f"Invalid keyword. Expected true, fall, this, null. Got {keyword}."
@@ -98,7 +101,7 @@ class CompilationEngine:
         if kind := self._subroutine_table.kind_of(identifier):
             return (kind, self._subroutine_table.index_of(identifier))
         elif kind := self._class_table.kind_of(identifier):
-            return (kind, self._subroutine_table.index_of(identifier))
+            return (kind, self._class_table.index_of(identifier))
         else:
             raise RuntimeError(f"Undefined identifier {identifier}.")
 
@@ -173,7 +176,7 @@ class CompilationEngine:
         while tk.current_token.value == "var":
             self.compile_var_dec()
         local_var_count = self._subroutine_table.var_count("local")
-        self._write_line(f"function {subroutine_name} {local_var_count}")
+        self.writer.write_function(subroutine_name, local_var_count)
         self.compile_statements()
         self._compile_symbol()
 
@@ -210,57 +213,61 @@ class CompilationEngine:
     def compile_let(self) -> None:
         """Compiles  a let statement."""
         tk = self.tokenizer
+        print("Start LET ", tk.current_token.value)
         self._compile_keyword()
+        print("TARGET", tk.current_token.value)
         target = self._compile_identifier()
         kind, index = self._lookup_identifier(target)
         if tk.current_token.value == "[":
             self._compile_symbol()
             self.compile_expression()
             self._compile_symbol()
+        print("EQ", tk.current_token.value)
         self._compile_symbol()
+        print("RHS", self.token)
         self.compile_expression()
-        self._write_line(f"pop {kind} {index}")
+        self.writer.write_pop(kind, index)
         self._compile_symbol()
 
     def compile_if(self) -> None:
         """Compiles an if statement possibly with a trailing `else` clause."""
         tk = self.tokenizer
+        L1 = f"LABEL_{self.count}"
+        L2 = f"LABEL_{self.count}"
         self._compile_keyword()
         self._compile_symbol()
         self.compile_expression()
         self._compile_symbol()
-        self._write_line("not")
-        L1 = f"LABEL_{self._count}"
-        L2 = f"LABEL_{self._count}"
-        self._write_line(f"if-goto {L1}")
-        self._write_line(f"goto {L2}")
-        self._write_line(f"label {L1}")
+        self.writer.write_arithmetic("~", True)
+        self.writer.write_if(L1)
         self._compile_symbol()
         self.compile_statements()
+        self.writer.write_goto(L2)
         self._compile_symbol()
-        self._write_line(f"label {L2}")
+        self.writer.write_label(L1)
         if tk.current_token.value == "else":
             self._compile_keyword()
             self._compile_symbol()
             self.compile_statements()
             self._compile_symbol()
+        self.writer.write_label(L2)
 
     def compile_while(self) -> None:
         """Compiles a while statement."""
         self._compile_keyword()
         L1 = f"LABEL_{self.count}"
         L2 = f"LABEL_{self.count}"
-        self._write_line(f"label {L1}")
+        self.writer.write_label(L1)
         self._compile_symbol()
         self.compile_expression()
-        self._write_line("not")
-        self._write_line(f"if-goto {L2}")
+        self.writer.write_arithmetic("~", True)
+        self.writer.write_if(L2)
         self._compile_symbol()
         self._compile_symbol()
         self.compile_statements()
         self._compile_symbol()
-        self._write_line(f"goto {L1}")
-        self._write_line(f"label {L2}")
+        self.writer.write_goto(L1)
+        self.writer.write_label(L2)
 
     def compile_do(self) -> None:
         """Compiles a do statement."""
@@ -270,28 +277,29 @@ class CompilationEngine:
         self._compile_symbol()
         # Discard return value from subroutine.
         # We use do statements only for their side effects.
-        self._write_line("pop temp 0")
+        self.writer.write_pop("temp", 0)
 
     def compile_return(self) -> None:
         """Compiles a return statement."""
         tk = self.tokenizer
         self._compile_keyword()
         if tk.current_token.value == ";":
-            self._write_line("return")
+            self.writer.write_return()
             self._compile_symbol()
             return
         self.compile_expression()
-        self._write_line("return")
+        self.writer.write_return()
         self._compile_symbol()
 
     def compile_expression(self) -> None:
         """Compiles an expression."""
         tk = self.tokenizer
+        print("TERM: ", self.token)
         self.compile_term()
         while (operator := tk.current_token.value) in OPERATORS:
             self._compile_symbol()
             self.compile_term()
-            self._write_line(f"{OPERATOR_COMMAND_MAP[operator]}")
+            self.writer.write_arithmetic(operator)
 
     def compile_term(self) -> None:
         """Compiles a term. If the current token is an identifier, the routine
@@ -324,14 +332,15 @@ class CompilationEngine:
             else:
                 identifier = self._compile_identifier()
                 (kind, index) = self._lookup_identifier(identifier)
-                self._write_line(f"push {kind} {index}")
+                self.writer.write_push(kind, index)
         elif tk.current_token.value == "(":
             self._compile_symbol()
             self.compile_expression()
             self._compile_symbol()
-        elif tk.current_token.value in UNARY_OPERATORS:
+        elif (operator := tk.current_token.value) in UNARY_OPERATORS:
             self._compile_symbol()
             self.compile_term()
+            self.writer.write_arithmetic(operator, True)
         else:
             raise RuntimeError(f"Invalid term. Got {tk.current_token.value}")
 
