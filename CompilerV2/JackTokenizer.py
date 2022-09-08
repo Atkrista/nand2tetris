@@ -26,6 +26,7 @@ class JackTokenizer:
         This method should be called only if has_more_tokens returns True.
         Initially there is no current token."""
         self.current_token = self._tokens.pop(0)
+        # print(self.current_token.value)
 
     def token_type(self) -> TokenType:
         """Returns the type of the current token."""

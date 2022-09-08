@@ -42,7 +42,7 @@ class SymbolTable:
 
     def var_count(self, kind) -> int:
         """Returns the number of variables of the given kind already defined in the table"""
-        if kind in ("static", "field", "argument", "local"):
+        if kind in ("static", "this", "argument", "local"):
             return len(list(filter(lambda x: x.kind == kind, self._table)))
         else:
             raise RuntimeError("kind must be one of static, field, arg, or var.")
@@ -56,7 +56,7 @@ class SymbolTable:
 
     def type_of(self, name) -> str:
         """Returns the type of the named variable."""
-        return list(filter(lambda x: x.name == name, self._table))[0].name
+        return list(filter(lambda x: x.name == name, self._table))[0].symbol_type
 
     def index_of(self, name) -> int:
         """Returns the index of the named variable."""

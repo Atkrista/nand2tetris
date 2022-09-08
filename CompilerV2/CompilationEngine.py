@@ -54,14 +54,47 @@ class CompilationEngine:
 
     def _compile_subroutine_call(self) -> None:
         tk = self.tokenizer
-        subroutine_name = self._compile_identifier()
-        if tk.current_token.value == ".":
+        # handle calls like Square.new() or game.run() or Output.printString()
+        if tk._get_next_token().value == ".":
+            self._compile_explicit_method_call()
+        # handle implicit method calls like do draw()
+        else:
+            self._compile_implicit_method_call()
+
+    def _compile_explicit_method_call(self) -> None:
+        tk = self.tokenizer
+        # Name of object
+        first = self._compile_identifier()
+        kind = self._subroutine_table.kind_of(first) or self._class_table.kind_of(first)
+        # An identifier we can't find in the two symbol tables must be an OS subroutine like
+        # Memory.alloc() or Output.printString()
+        if not kind:
             self._compile_symbol()
-            subroutine_name = ".".join((subroutine_name, self._compile_identifier()))
+            second = self._compile_identifier()
+            self._compile_symbol()
+            n_args = self.compile_expression_list()
+            self._compile_symbol()
+            self.writer.write_call(".".join((first, second)), n_args)
+            return
+        kind, idx, first_type = self._lookup_identifier(first)
         self._compile_symbol()
-        arg_count = self.compile_expression_list()
-        self.writer.write_call(subroutine_name, arg_count)
+        second = self._compile_identifier()
         self._compile_symbol()
+        n_args = self.compile_expression_list() + 1
+        self._compile_symbol()
+        # Push the object as arg 0
+        self.writer.write_push(kind, idx)
+        self.writer.write_call(".".join((first_type, second)), n_args)
+
+    def _compile_implicit_method_call(self) -> None:
+        tk = self.tokenizer
+        name = self._compile_identifier()
+        self._compile_symbol()
+        n_args = self.compile_expression_list() + 1
+        self._compile_symbol()
+        # Push the object as arg 0
+        self.writer.write_push("pointer", 0)
+        self.writer.write_call(".".join((self._class_name, name)), n_args)
 
     def _compile_string_const(self, string):
         length = len(string)
@@ -83,25 +116,34 @@ class CompilationEngine:
         self.writer.write_push("constant", int_val)
 
     def _compile_keyword_const(self, keyword):
+        # print("HERE")
         if keyword == "true":
             self.writer.write_push("constant", 1)
             self.writer.write_arithmetic("-", True)
         elif keyword in ("false", "null"):
             self.writer.write_push("constant", 0)
         elif keyword == "this":
-            self.writer.write_push("argument", 0)
+            self.writer.write_push("pointer", 0)
         else:
             raise RuntimeError(
                 f"Invalid keyword. Expected true, fall, this, null. Got {keyword}."
             )
 
     def _lookup_identifier(self, identifier):
-        """Returns a tuple of (kind, index) for a particular identifier
+        """Returns a tuple of (kind, index, type) for a particular identifier
         Looks up first in Subroutine level symbol table then in Class level symbol table."""
         if kind := self._subroutine_table.kind_of(identifier):
-            return (kind, self._subroutine_table.index_of(identifier))
+            return (
+                kind,
+                self._subroutine_table.index_of(identifier),
+                self._subroutine_table.type_of(identifier),
+            )
         elif kind := self._class_table.kind_of(identifier):
-            return (kind, self._class_table.index_of(identifier))
+            return (
+                kind,
+                self._class_table.index_of(identifier),
+                self._class_table.type_of(identifier),
+            )
         else:
             raise RuntimeError(f"Undefined identifier {identifier}.")
 
@@ -131,7 +173,6 @@ class CompilationEngine:
             self._compile_symbol()
             name = self._compile_identifier()
             self._class_table.define(name, symbol_type, kind)
-        # print(self._class_table._table)
         self._compile_symbol()
 
     def compile_subroutine(self) -> None:
@@ -149,7 +190,22 @@ class CompilationEngine:
         self._compile_symbol()
         self.compile_parameter_list()
         self._compile_symbol()
-        self.compile_subroutine_body(subroutine_name)
+        self._compile_symbol()
+        while tk.current_token.value == "var":
+            self.compile_var_dec()
+        local_var_count = self._subroutine_table.var_count("local")
+        self.writer.write_function(subroutine_name, local_var_count)
+        # Code to generate the object in memory
+        if keyword == "constructor":
+            size = self._class_table.var_count("this")
+            self.writer.write_push("constant", size)
+            self.writer.write_call("Memory.alloc", 1)
+            self.writer.write_pop("pointer", 0)
+        if keyword == "method":
+            # Align the `this` segment of object for this method
+            self.writer.write_push("argument", 0)
+            self.writer.write_pop("pointer", 0)
+        self.compile_subroutine_body()
 
     def compile_parameter_list(self) -> None:
         """Compiles a (possibly empty) parameter list. Does not handle the closing
@@ -169,14 +225,8 @@ class CompilationEngine:
             name = self._compile_identifier()
             self._subroutine_table.define(name, symbol_type, "argument")
 
-    def compile_subroutine_body(self, subroutine_name) -> None:
+    def compile_subroutine_body(self) -> None:
         """Compiles a subroutine's body."""
-        tk = self.tokenizer
-        self._compile_symbol()
-        while tk.current_token.value == "var":
-            self.compile_var_dec()
-        local_var_count = self._subroutine_table.var_count("local")
-        self.writer.write_function(subroutine_name, local_var_count)
         self.compile_statements()
         self._compile_symbol()
 
@@ -213,18 +263,14 @@ class CompilationEngine:
     def compile_let(self) -> None:
         """Compiles  a let statement."""
         tk = self.tokenizer
-        print("Start LET ", tk.current_token.value)
         self._compile_keyword()
-        print("TARGET", tk.current_token.value)
         target = self._compile_identifier()
-        kind, index = self._lookup_identifier(target)
+        kind, index, _ = self._lookup_identifier(target)
         if tk.current_token.value == "[":
             self._compile_symbol()
             self.compile_expression()
             self._compile_symbol()
-        print("EQ", tk.current_token.value)
         self._compile_symbol()
-        print("RHS", self.token)
         self.compile_expression()
         self.writer.write_pop(kind, index)
         self._compile_symbol()
@@ -294,7 +340,6 @@ class CompilationEngine:
     def compile_expression(self) -> None:
         """Compiles an expression."""
         tk = self.tokenizer
-        print("TERM: ", self.token)
         self.compile_term()
         while (operator := tk.current_token.value) in OPERATORS:
             self._compile_symbol()
@@ -331,7 +376,7 @@ class CompilationEngine:
             # Variable
             else:
                 identifier = self._compile_identifier()
-                (kind, index) = self._lookup_identifier(identifier)
+                kind, index, _ = self._lookup_identifier(identifier)
                 self.writer.write_push(kind, index)
         elif tk.current_token.value == "(":
             self._compile_symbol()
