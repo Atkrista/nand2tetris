@@ -47,7 +47,7 @@ class SymbolTable:
         else:
             raise RuntimeError("kind must be one of static, field, arg, or var.")
 
-    def kind_of(self, name) -> str | None:
+    def kind_of(self, name):
         """Returns the kind of the named identifier. If the identifier is not found, returns NONE."""
         if found := list(filter(lambda x: x.name == name, self._table)):
             return found[0].kind
