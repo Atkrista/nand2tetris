@@ -77,40 +77,32 @@ class CompilationEngine:
             self.writer.write_call(".".join((first, second)), n_args)
             return
         kind, idx, first_type = self._lookup_identifier(first)
+        # Push the object as arg 0
+        self.writer.write_push(kind, idx)
         self._compile_symbol()
         second = self._compile_identifier()
         self._compile_symbol()
         n_args = self.compile_expression_list() + 1
         self._compile_symbol()
-        # Push the object as arg 0
-        self.writer.write_push(kind, idx)
         self.writer.write_call(".".join((first_type, second)), n_args)
 
     def _compile_implicit_method_call(self) -> None:
         tk = self.tokenizer
         name = self._compile_identifier()
+        # Push the object as arg 0
+        self.writer.write_push("pointer", 0)
         self._compile_symbol()
         n_args = self.compile_expression_list() + 1
         self._compile_symbol()
-        # Push the object as arg 0
-        self.writer.write_push("pointer", 0)
         self.writer.write_call(".".join((self._class_name, name)), n_args)
 
     def _compile_string_const(self, string):
         length = len(string)
-        # Save `this` somewhere
-        self.writer.write_push("pointer", 0)
-        self.writer.write_pop("temp", 0)
-        # Call to create new string object
         self.writer.write_push("constant", length)
         self.writer.write_call("String.new", 1)
-        # Update `this` to address of new string obj
-        self.writer.write_pop("pointer", 0)
-        for ch in string[::-1]:
+        for ch in string:
             self.writer.write_push("constant", ord(ch))
-            self.writer.write_call("String.appendChar", 1)
-            # Rather than dumping the return value, I chose to update `this` which is fine
-            self.writer.write_pop("pointer", 0)
+            self.writer.write_call("String.appendChar", 2)
 
     def _compile_int_const(self, int_val):
         self.writer.write_push("constant", int_val)
@@ -146,6 +138,21 @@ class CompilationEngine:
             )
         else:
             raise RuntimeError(f"Undefined identifier {identifier}.")
+
+    def _compile_array(self, fetch_value=True) -> None:
+        """Compiles an entire array expression array[expression] and puts it on the top of the stack.
+        Optionally skips fetching value of array element."""
+        tk = self.tokenizer
+        arr_name = self._compile_identifier()
+        kind, index, _ = self._lookup_identifier(arr_name)
+        self._compile_symbol()
+        self.compile_expression()
+        self._compile_symbol()
+        self.writer.write_push(kind, index)
+        self.writer.write_arithmetic("+")
+        if fetch_value:
+            self.writer.write_pop("pointer", 1)
+            self.writer.write_push("that", 0)
 
     def compile_class(self) -> None:
         """Compiles a complete class."""
@@ -264,16 +271,27 @@ class CompilationEngine:
         """Compiles  a let statement."""
         tk = self.tokenizer
         self._compile_keyword()
-        target = self._compile_identifier()
-        kind, index, _ = self._lookup_identifier(target)
-        if tk.current_token.value == "[":
+        if tk._get_next_token().value == "[":
+            # Handle arrays as targets
+            # ex: arr[expr] = expr;
+            self._compile_array(fetch_value=False)
             self._compile_symbol()
             self.compile_expression()
             self._compile_symbol()
-        self._compile_symbol()
-        self.compile_expression()
-        self.writer.write_pop(kind, index)
-        self._compile_symbol()
+            # Save value of RHS
+            self.writer.write_pop("temp", 0)
+            self.writer.write_pop("pointer", 1)
+            self.writer.write_push("temp", 0)
+            self.writer.write_pop("that", 0)
+
+        else:
+            # Handle normal variables as targets
+            var_name = self._compile_identifier()
+            self._compile_symbol()
+            self.compile_expression()
+            self._compile_symbol()
+            kind, index, _ = self._lookup_identifier(var_name)
+            self.writer.write_pop(kind, index)
 
     def compile_if(self) -> None:
         """Compiles an if statement possibly with a trailing `else` clause."""
@@ -366,10 +384,7 @@ class CompilationEngine:
             next = tk._get_next_token().value
             # Array access
             if next == "[":
-                self._compile_identifier()
-                self._compile_symbol()
-                self.compile_expression()
-                self._compile_symbol()
+                self._compile_array()
             # Subroutine call
             elif next in (".", "("):
                 self._compile_subroutine_call()

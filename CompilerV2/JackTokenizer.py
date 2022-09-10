@@ -13,6 +13,7 @@ class JackTokenizer:
         """Opens the input .jack file/stream and gets ready to tokeninze it."""
         self._tokens = []
         self._tokenize(input)
+        # print(self._tokens)
 
     def _get_next_token(self):
         return self._tokens[0]
@@ -26,7 +27,7 @@ class JackTokenizer:
         This method should be called only if has_more_tokens returns True.
         Initially there is no current token."""
         self.current_token = self._tokens.pop(0)
-        # print(self.current_token.value)
+        print(self.current_token)
 
     def token_type(self) -> TokenType:
         """Returns the type of the current token."""
@@ -76,17 +77,18 @@ class JackTokenizer:
         return self.current_token.value[1:-1]
 
     def _tokenize(self, input):
+        keyword_spec = (r"\b" + e.value + r"\b" for e in KeyWord)
         token_specification = [
             # Skip whitespace and comments
-            ("SKIP", r"(?:\s+)"),
-            ("KEYWORD", rf"{'|'.join((e.value for e in KeyWord))}"),
+            ("KEYWORD", rf"{'|'.join(keyword_spec)}"),
             ("SYMBOLS", r"\{|\}|\(|\)|\[|\]|\.|,|;|\-|\+|\*|/|&|\||<|>|=|~"),
             ("INT_CONST", r"\d+"),
             ("STRING_CONST", r'".*"'),
             ("IDENTIFIER", r"\w+"),
+            ("SKIP", r"(?:\s+)"),
         ]
-        tok_regex = "|".join("(?P<%s>%s)" % pair for pair in token_specification)
-        block_comment_regex = r"/\*\*.*?\*/"
+        tok_regex = "|".join(r"(?P<%s>%s)" % pair for pair in token_specification)
+        block_comment_regex = r"/\*.*?\*/"
         inline_comment_regex = r"//.*?\n"
         temp = input.read()
         # Remove inline and block comments
