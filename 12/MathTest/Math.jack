@@ -1,0 +1,137 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Math.jack
+
+/**
+ * A library of commonly used mathematical functions.
+ * Note: Jack compilers implement multiplication and division using OS method calls.
+ */
+
+class Math {
+
+    static int powersOfTwo;
+
+    /** Initializes the library. */
+    function void init() {
+        let powersOfTwo = Array.new(16);
+        let powersOfTwo[0] = 1;
+        let powersOfTwo[1] = 2;
+        let powersOfTwo[2] = 4;
+        let powersOfTwo[3] = 8;
+        let powersOfTwo[4] = 16;
+        let powersOfTwo[5] = 32;
+        let powersOfTwo[6] = 64;
+        let powersOfTwo[7] = 128;
+        let powersOfTwo[8] = 256;
+        let powersOfTwo[9] = 512;
+        let powersOfTwo[10] = 1024;
+        let powersOfTwo[11] = 2048;
+        let powersOfTwo[12] = 4096;
+        let powersOfTwo[13] = 8192;
+        let powersOfTwo[14] = 16384;
+        let powersOfTwo[15] = -32767-1;
+        return;
+    }
+
+    /** Returns the absolute value of x. */
+    function int abs(int x) {
+        if( x = 0) {return 0;}
+        if(x > 0) {return x;}
+        else {return (-x);}
+    }
+
+    /** Returns the product of x and y. 
+     *  When a Jack compiler detects the multiplication operator '*' in the 
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x*y and multiply(x,y) return the same value.
+     */
+    function int multiply(int x, int y) {
+        // 42 * 14
+        var int sum, idx;
+        let idx = 0;
+        let sum = 0;
+        while (idx<16) {
+            if (Math.bitSet(y, idx)) {
+                let sum = sum + x;
+            }
+            // Left shift x by 1 bit i.e. multiply by 2
+            let x = x + x;
+            let idx = idx + 1;
+        }
+        return sum;
+    }
+
+    /** Returns the integer part of x/y.
+     *  When a Jack compiler detects the multiplication operator '/' in the 
+     *  program's code, it handles it by invoking this method. In other words,
+     *  the Jack expressions x/y and divide(x,y) return the same value.
+     */
+    function int divide(int x, int y) {
+        var int q, ret;
+        var boolean flag;
+        let flag = false;
+        if(x<0) {
+            let x = -x;
+            let flag = ~flag;
+            }
+        if(y<0) {
+            let y = -y;
+            let flag = ~flag;
+        }
+        if (y > x) { 
+                return 0;
+            }
+        let q = Math.divide(x, 2 * y);
+        if((x - (2 * q * y)) < y) {let ret = 2 * q;}
+        else {let ret = 2 * q + 1;} 
+        if(flag) {return -ret;}
+        else{return ret;}
+    }
+
+    /** Returns the integer part of the square root of x. */
+    function int sqrt(int x) {
+        var int y, j, temp;
+        let j = (Math.bitCount(x) / 2 ) - 1;
+        let y = 0;
+        while((j>0)|(j=0)) {
+            let temp = (y + powersOfTwo[j]) * (y + powersOfTwo[j]); 
+            if ((temp < x) | (temp = x)) { let y = y + powersOfTwo[j]; }
+        }
+        return y;
+    }
+
+    /** Returns the greater number. */
+    function int max(int a, int b) {
+        if (a > b) { return a;}
+        else { return b;}
+    }
+
+    /** Returns the smaller number. */
+    function int min(int a, int b) {
+        if (a < b) { return a;}
+        else { return b; }
+    }
+
+    /** Returns the number of bits in a number's representation */
+    function int bitCount(int num) {
+        var int idx;
+        let idx = 15;
+        // Scan from L to R and return the position of first bit `1` we encounter
+        while ((idx>0)|(idx=0)) {
+            if (Math.bitSet(num, idx)) {
+                return idx + 1;
+            } else {
+                let idx = idx - 1;
+            }
+        }
+        return 0;
+    }
+
+    /** Returns `true` if the i'th bit of num is set, `false` otherwise */
+    function bool bitSet(int num, int i) {
+        var int test;
+        let test = (num & powersOfTwo[i]);
+        return ~(test=0);
+    }
+}
