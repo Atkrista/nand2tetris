@@ -11,54 +11,130 @@
  * string-oriented operations.
  */
 class String {
+    field Array chars;
+    field int maxLen, len;
 
     /** constructs a new empty string with a maximum length of maxLength
      *  and initial length of 0. */
     constructor String new(int maxLength) {
+        let maxLen = maxLength;
+        let len = 0; 
+        if(maxLength>0) {
+            let chars = Array.new(maxLength);
+        }
+        return this;
     }
 
     /** Disposes this string. */
     method void dispose() {
+        do Memory.deAlloc(this);
+        return;
     }
 
     /** Returns the current length of this string. */
     method int length() {
+        return len;
     }
 
     /** Returns the character at the j-th location of this string. */
     method char charAt(int j) {
+        return chars[j];
     }
 
     /** Sets the character at the j-th location of this string to c. */
     method void setCharAt(int j, char c) {
+        let chars[j] = c;
+        return;
     }
 
     /** Appends c to this string's end and returns this string. */
     method String appendChar(char c) {
+        let chars[len] = c;
+        let len = len + 1;
+        return this;
     }
 
     /** Erases the last character from this string. */
     method void eraseLastChar() {
+        let chars[len-1] = 0;
+        let len = len - 1;
+        return;
     }
 
     /** Returns the integer value of this string, 
      *  until a non-digit character is detected. */
     method int intValue() {
+        var int idx, sum, placeVal;
+        let idx = len - 1;
+        let sum = 0;
+        let placeVal = 1;
+        while((idx>0)|(idx=0)) {
+           if(chars[idx]=45) {return -sum;}
+           else{
+               let sum = sum + (placeVal * (chars[idx]-48));
+           }
+           let idx = idx - 1;
+           let placeVal = placeVal * 10;
+        }
+        return sum;
     }
-
     /** Sets this string to hold a representation of the given value. */
     method void setInt(int val) {
+        var int digit;
+        let len = 0;
+        if(val<0) {
+            let val = Math.abs(val);
+            do appendChar(45);
+        }
+        while(val>0) {
+            let digit = String.firstDigit(val);
+            do appendChar(digit+48);
+            let val = String.removeMSD(val);
+        }
+        return;
     }
 
     /** Returns the new line character. */
     function char newLine() {
+        return 128;
     }
 
     /** Returns the backspace character. */
     function char backSpace() {
+        return 129;
     }
 
     /** Returns the double quote (") character. */
     function char doubleQuote() {
+       return 34; 
+    }
+
+    /** Return the first Digit of num */
+    function int firstDigit(int num){
+        while(num>9) {
+            let num = num / 10;
+        }
+        return num;
+    }
+
+    function int removeMSD(int num) {   
+        var int count, temp;
+        let count = 0;
+        let temp = num;
+        while(temp>9) {
+            let temp = temp/10;
+            let count = count + 1;
+        }
+        return num - (String.firstDigit(num) * String.powerOfTen(count));
+    }
+
+    function int powerOfTen(int power){
+        var int sum;
+        let sum = 1;
+        while(power>0){
+            let sum = sum * 10;
+            let power = power - 1;
+        }
+        return sum;
     }
 }
