@@ -10,34 +10,106 @@
  * the screen is indexed (0,0).
  */
 class Screen {
+    static boolean color;
+    static int screenBase, maxRows, maxCols;
+    static Array masks;
 
     /** Initializes the Screen. */
     function void init() {
+        let screenBase = 16384;
+        let color = true;
+        let maxRows = 256;
+        let maxCols = 512;
+        // Store masks for later 
+        let masks = Array.new(16);
+        let masks[0] = 1;
+        let masks[1] = 2;
+        let masks[2] = 4;
+        let masks[3] = 8;
+        let masks[4] = 16;
+        let masks[5] = 32;
+        let masks[6] = 64;
+        let masks[7] = 128;
+        let masks[8] = 256;
+        let masks[9] = 512;
+        let masks[10] = 1024;
+        let masks[11] = 2048;
+        let masks[12] = 4096;
+        let masks[13] = 8192;
+        let masks[14] = 16384;
+        let masks[15] = -32767-1;
+        return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() {
+        var int row, col;
+        let row = 0;
+        let col = 0;
+        do Screen.setColor(false);
+        while(row<maxRows) {
+            while(col<maxCols){
+                do Screen.drawPixel(row, col);
+                let col = col + 1;
+            }
+            let col = 0;
+            let row = row + 1;
+        }
+        return;
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(boolean b) {
+        let color = b;
+        return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+        var int word, bitPos, mask, wordVal;
+        // Compute the word corresponding to pixel (x, y)
+        let word = screenBase + (32*x) + (y/16);
+        let wordVal = Memory.peek(word);
+        // Compute the position of bit inside the word i.e. y mod 16
+        let bitPos = y - (16 * (y/16));
+        if(~color) {
+            do Memory.poke(word, (wordVal&masks[bitPos]));
+        }else {
+            do Memory.poke(word, (wordVal|masks[bitPos]));
+        }
+        return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
+        var int dx, dy, a, b, diff;
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let a = 0;
+        let b = 0;
+        let diff = 0;
+        while((~(a>dx))&(~(b>dy))) {
+            do Screen.drawPixel(x1+a, y1+b);
+            if(diff<0) {let a = a + 1; let diff = diff+dy;}
+            else{ let b = b + 1; let diff = diff - dx;}
+        }
+        return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+        // The 4 coordinates are - (x1, y1), (x1, y2), (x2, y1), (x2, y2)
+        do Screen.drawLine(x1, y1, x1, y2);
+        do Screen.drawLine(x1, y2, x2, y2);
+        do Screen.drawLine(x2, y2, x2, y1);
+        do Screen.drawLine(x2, y1, x1, y1);
+        return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
+        return;
     }
 }
