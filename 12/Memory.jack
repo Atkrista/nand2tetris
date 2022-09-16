@@ -9,14 +9,25 @@
  * consists of 32,768 words, each holding a 16-bit binary number.
  */ 
 class Memory {
-    field Array memory;
-    var int heapBase;
+    static int heapBase, heapLimit;
+    static Array memory, freeList;
 
     /** Initializes the class. */
     function void init() {
         let memory = 0;
         // Base addr of heap segment of memory
         let heapBase = 2048;
+        // Limit of heap segment => SCREEN
+        let heapLimit = 16384;
+        
+        // Freelist, a linked list to hold free memory segments
+        // Each entry in the list has two housekeeping fields
+        // ListItem[0] => Size of the segment
+        // ListItem[1] => Address of the next segment, value of null means its the last item
+        let freeList = heapBase;
+        let freeList[0] = heapLimit - heapBase + 1;
+        let freeList[1] = null;
+        return;
     }
 
     /** Returns the RAM value at the given address. */
@@ -26,16 +37,62 @@ class Memory {
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
-        let memory[address] = value; 
+        let memory[address] = value;
+        return; 
     }
 
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+        return Memory.firstFit(size);
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-    }    
+        var int freed, cur, size;
+        let freed = o;
+        let cur = freeList;
+        // Traverse to the end of freeList
+        while(~((Memory.peek(cur+1))=null)) {
+            let cur = Memory.peek(cur+1);
+        }
+        let freed = freed - 1;
+
+        // Append freed block to end of freeList
+        do Memory.poke(cur+1, freed);
+        do Memory.poke(freed+1, null);
+        
+        let size = Memory.peek(freed);
+        do Memory.poke(freed, size+1);
+        return;
+    }
+
+    /** First fit algorithm */
+    function int firstFit(int size) {
+        var Array cur, free;
+        var int next, len;
+        let cur = freeList;
+        // Initially freeList spans the entire heap segment
+        while(true) {
+            let len = Memory.peek(cur);
+            let next = Memory.peek(cur+1);
+            if(len>(size+2)) {
+                let free = cur + len - size;
+                // Store len of allocated block just before the start addr of allocated block
+                do Memory.poke(free-1, size);
+                // Update value of free memory segment
+                do Memory.poke(cur, len-(size+1));
+                return free;
+            }
+            if(next=0) {
+                // Failed to find a memory segment
+                // TODO: Defragment memory blocks and try to find again
+                return -1;
+            }else {
+                let cur = next;
+            }
+        }
+        return -1;
+    }
 }
