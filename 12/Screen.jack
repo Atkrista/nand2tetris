@@ -69,10 +69,10 @@ class Screen {
     function void drawPixel(int x, int y) {
         var int word, bitPos, mask, wordVal;
         // Compute the word corresponding to pixel (x, y)
-        let word = screenBase + (32*x) + (y/16);
+        let word = screenBase + (32*y) + (x/16);
         let wordVal = Memory.peek(word);
         // Compute the position of bit inside the word i.e. y mod 16
-        let bitPos = y - (16 * (y/16));
+        let bitPos = x - (16 * (x/16));
         if(~color) {
             do Memory.poke(word, (wordVal&masks[bitPos]));
         }else {
@@ -83,33 +83,104 @@ class Screen {
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
-        var int dx, dy, a, b, diff;
+        var int dx, dy, down, right, diff, temp;
+        let down = 0;
+        let right = 0;
         let dx = x2 - x1;
         let dy = y2 - y1;
-        let a = 0;
-        let b = 0;
         let diff = 0;
-        while((~(a>dx))&(~(b>dy))) {
-            do Screen.drawPixel(x1+a, y1+b);
-            if(diff<0) {let a = a + 1; let diff = diff+dy;}
-            else{ let b = b + 1; let diff = diff - dx;}
+
+        // Swap points if x1>x2
+        if (dx<0) {
+            let temp = x1;
+            let x1 = x2;
+            let x2 = temp;
+            let temp = y1;
+            let y1 = y2;
+            let y2 = temp;
+            let dx = x2 - x1;
+            let dy = y2 - y1;
         }
-        return;
+
+        // Horizontal Line L to R
+        if(dy=0) {
+            while(diff<dx) {
+                do Screen.drawPixel(x1+diff, y1);
+                let diff = diff + 1;
+            }
+            return;
+        }
+        
+        if(dx=0) {
+            // Vertical Line S to N
+            if(dy<0){
+                let dy = Math.abs(dy);
+                while(diff<dy){
+                    do Screen.drawPixel(x1, y1-diff);
+                    let diff = diff + 1;
+                }
+                return;
+            }
+            // Vertical Line N to S
+            while(diff<dy) {
+                do Screen.drawPixel(x1, y1+diff);
+                let diff = diff + 1;
+            }
+            return;
+        }
+
+        // Draw lines going from SW to NE
+        if(dy<0) {
+            let dy = Math.abs(dy);
+            while((~(right>dx))&(~(down>dy))) {
+                do Screen.drawPixel(x1+right, y1-down);
+                if(diff<0) {
+                    let down = down + 1;
+                    let diff = diff + dx;
+                } else {
+                    let right = right + 1;
+                    let diff = diff - dy;
+                }
+            } 
+            return;
+        }
+        
+        // Draw lines going from NW to SE
+        while((~(right>dx))&(~(down>dy))) {
+            do Screen.drawPixel(x1+right, y1+down);
+            if(diff<0) {
+                let down = down + 1;
+                let diff = diff + dx;
+            } else {
+                let right = right + 1;
+                let diff = diff - dy;
+            }
+        } 
+        return; 
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
-        // The 4 coordinates are - (x1, y1), (x1, y2), (x2, y1), (x2, y2)
-        do Screen.drawLine(x1, y1, x1, y2);
-        do Screen.drawLine(x1, y2, x2, y2);
-        do Screen.drawLine(x2, y2, x2, y1);
-        do Screen.drawLine(x2, y1, x1, y1);
+        // The 4 coordinates are - (x1, y1), (x2, y1), (x2, y2), (x1, y2)
+        var int down;
+        let down = 0; 
+        while(~(down>(y2-y1))) {
+            do Screen.drawLine(x1, y1+down, x2, y1+down);
+            let down = down + 1;
+        }
         return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
+        var int dy, desc;
+        let dy = -r;
+        while(~(dy>r)) {
+            let desc = Math.sqrt((r*r)-(dy*dy));
+            do Screen.drawLine(x-desc, y+dy, x+desc, y+dy);
+            let dy = dy + 1;
+        }
         return;
     }
 }
