@@ -8,17 +8,18 @@
  */
 class Keyboard {
 
+    static int KBD;
+
     /** Initializes the keyboard. */
     function void init() {
+        let KBD = 24576;
+        return;
     } 
 
     /**
      * Returns the character of the currently pressed key on the keyboard;
      * if no key is currently pressed, returns 0.
-     *
-     * Recognizes all ASCII characters, as well as the following keys:
-     * new line = 128 = String.newline()
-     * backspace = 129 = String.backspace()
+     *OutputTest()
      * left arrow = 130
      * up arrow = 131
      * right arrow = 132
@@ -33,6 +34,7 @@ class Keyboard {
      * F1 - F12 = 141 - 152
      */
     function char keyPressed() {
+        return Memory.peek(KBD);
     }
 
     /**								
@@ -41,6 +43,19 @@ class Keyboard {
      * of the pressed key.
      */
     function char readChar() {
+        var char ch;
+        // Wait for keypress
+        while(Keyboard.keyPressed()=0){
+            // do nothing
+            do Keyboard.idle();
+        }
+        let ch = Keyboard.keyPressed();
+        while(~(Keyboard.keyPressed()=0)){
+            // do nothing
+            do Keyboard.idle();
+        }
+        do Output.printChar(ch);
+        return ch;
     }
 
     /**								
@@ -49,6 +64,28 @@ class Keyboard {
      * and returns its value. Also handles user backspaces.
      */
     function String readLine(String message) {
+        var String str;
+        var char ch;
+        var boolean flag;
+        let flag = true;
+        let str = String.new(64);
+        while(flag) {
+            let ch = Keyboard.readChar(); 
+            if(ch=String.newLine()) {
+                do Outptut.println();
+                let flag = false;
+            }
+            if(ch=String.backSpace()){
+                if(str.length>1){
+                    do str.eraseLastChar();
+                    do Output.backSpace();
+                }
+            }else{
+                do str.appendChar(ch);
+                do Output.printChar(ch);
+            }
+        }
+        return str;
     }   
 
     /**								
@@ -58,5 +95,14 @@ class Keyboard {
      * entered text is detected). Also handles user backspaces. 
      */
     function int readInt(String message) {
+        var String str;
+        let str = String.new(64);
+        do Output.printString(message);
+        let str = Output.readLine();
+        return str.intValue();
+    }
+
+    function void idle() {
+        return;
     }
 }
