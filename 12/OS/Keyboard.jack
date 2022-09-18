@@ -69,20 +69,20 @@ class Keyboard {
         var boolean flag;
         let flag = true;
         let str = String.new(64);
+        do Output.printString(message);
         while(flag) {
             let ch = Keyboard.readChar(); 
             if(ch=String.newLine()) {
-                do Outptut.println();
+                do Output.println();
                 let flag = false;
             }
             if(ch=String.backSpace()){
-                if(str.length>1){
-                    do str.eraseLastChar();
+                if((str.length())>0){
                     do Output.backSpace();
+                    do str.eraseLastChar();
                 }
             }else{
                 do str.appendChar(ch);
-                do Output.printChar(ch);
             }
         }
         return str;
@@ -97,8 +97,7 @@ class Keyboard {
     function int readInt(String message) {
         var String str;
         let str = String.new(64);
-        do Output.printString(message);
-        let str = Output.readLine();
+        let str = Keyboard.readLine(message);
         return str.intValue();
     }
 
