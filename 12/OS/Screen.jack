@@ -49,7 +49,7 @@ class Screen {
         do Screen.setColor(false);
         while(row<maxRows) {
             while(col<maxCols){
-                do Screen.drawPixel(row, col);
+                do Screen.drawPixel(col, row);
                 let col = col + 1;
             }
             let col = 0;
