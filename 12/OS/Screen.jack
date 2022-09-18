@@ -11,8 +11,8 @@
  */
 class Screen {
     static boolean color;
-    static int screenBase, maxRows, maxCols;
-    static Array masks;
+    static int maxRows, maxCols;
+    static Array screenBase, masks;
 
     /** Initializes the Screen. */
     function void init() {
@@ -43,17 +43,23 @@ class Screen {
 
     /** Erases the entire screen. */
     function void clearScreen() {
-        var int row, col;
-        let row = 0;
-        let col = 0;
-        do Screen.setColor(false);
-        while(row<maxRows) {
-            while(col<maxCols){
-                do Screen.drawPixel(col, row);
-                let col = col + 1;
-            }
-            let col = 0;
-            let row = row + 1;
+        // var int row, col;
+        // let row = 0;
+        // let col = 0;
+        // do Screen.setColor(false);
+        // while(row<maxRows) {
+        //     while(col<maxCols){
+        //         do Screen.drawPixel(col, row);
+        //         let col = col + 1;
+        //     }
+        //     let col = 0;
+        //     let row = row + 1;
+        // }
+        // return;
+        var int idx;
+        while(idx<8192) {
+            let screenBase[idx] = false;
+            let idx = idx + 1;
         }
         return;
     }
